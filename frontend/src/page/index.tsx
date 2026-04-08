@@ -6,7 +6,23 @@ import Footed from "./componan/footed";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import DangNhap from "./DanhNhap";
+import { useEffect, useState } from "react";
 export default function Index() {
+  const [DataKH, setDataKh] = useState<any[]>([]);
+  const layDataKh = async () => {
+    try {
+      const api = await fetch("http://localhost:3000/khoaHoc");
+      const req = await api.json();
+      setDataKh(req.dulieu);
+    } catch (err) {
+      console.log("lay danh sach khoa hoc thât bai");
+    }
+  };
+
+  useEffect(() => {
+    layDataKh();
+  }, []);
+
   return (
     <>
       <Header></Header>
@@ -298,7 +314,7 @@ export default function Index() {
       </section>
 
       <Teacher />
-
+      {/* ////// danh sách khóa học */}
       <section className="mx-[10px] text-white bg-gradient-to-t from-[#29646D] to-[#4FC2D3]  px-[20px] py-[30px] rounded-[10px] my-[100px]">
         <div className="flex  items-center text-center w-full justify-center">
           <motion.div
@@ -337,66 +353,26 @@ export default function Index() {
           </motion.div>
         </div>
 
-        <div className="mt-[20px] flex justify-center gap-[30px] ">
+        <div className="mt-[20px] flex-wrap flex justify-center gap-[30px]  ">
           {/* //////////////////////////// */}
-          <Link
-            to={`#`}
-            className="w-[490px] h-[80px] p-[10px] backdrop-blur-sm border bg-white/15 rounded-[10px] border-white/20 flex items-center justify-between transition-all hover:scale-[1.05] duration-500 hover:bg-white/30"
-          >
-            <div className="flex flex-row items-center gap-[10px]">
-              <div className="w-[50px] h-[50px] bg-white rounded-[50%] flex justify-center items-center  text-center font-extrabold text-[25px] text-[#1A4857]">
-                1
-              </div>
-              <p className="font-extrabold text-[25px]">TOIC nền tảng</p>
-            </div>
-            <p className="text-[30px]">→</p>
-          </Link>
-          {/* /////////////////////////// */}
 
-          <Link
-            to={`#`}
-            className=" hover:bg-white/30 w-[490px] h-[80px] p-[10px] backdrop-blur-sm border bg-white/15 rounded-[10px] border-white/20 flex items-center justify-between transition-all hover:scale-[1.05] duration-500"
-          >
-            <div className="flex flex-row items-center gap-[10px]">
-              <div className="w-[50px] h-[50px] bg-white rounded-[50%] flex justify-center items-center  text-center font-extrabold text-[25px] text-[#1A4857]">
-                2
+          {DataKH?.map((item, index) => (
+            <Link
+              key={item._id}
+              to={`/khoahoc/${item._id}`}
+              className="w-[490px] h-[80px] p-[10px] backdrop-blur-sm border bg-white/15 rounded-[10px] border-white/20 flex items-center justify-between transition-all hover:scale-[1.05] duration-500 hover:bg-white/30"
+            >
+              <div className="flex flex-row items-center gap-[10px] overflow-hidden">
+                <div className="w-[50px] h-[50px] shrink-0 bg-white rounded-[50%] flex justify-center items-center overflow-hidden  text-center font-extrabold text-[25px] text-[#1A4857]">
+                  {index + 1}
+                </div>
+                <p className="font-extrabold text-[25px] truncate overflow-hidden w-full ">
+                  {item.TenKhoaHoc}
+                </p>
               </div>
-              <p className="font-extrabold text-[25px]">TOIC L&R trung cấp</p>
-            </div>
-            <p className="text-[30px]">→</p>
-          </Link>
-          {/* /////////////////////////// */}
-        </div>
-
-        <div className="mt-[20px] flex justify-center gap-[30px] ">
-          {/* //////////////////////////// */}
-          <Link
-            to={`#`}
-            className=" hover:bg-white/30 w-[490px] h-[80px] p-[10px] backdrop-blur-sm border bg-white/15 rounded-[10px] border-white/20 flex items-center justify-between transition-all hover:scale-[1.05] duration-500"
-          >
-            <div className="flex flex-row items-center gap-[10px]">
-              <div className="w-[50px] h-[50px] bg-white rounded-[50%] flex justify-center items-center  text-center font-extrabold text-[25px] text-[#1A4857]">
-                3
-              </div>
-              <p className="font-extrabold text-[25px]">TOIC W&S trung cấp</p>
-            </div>
-            <p className="text-[30px]">→</p>
-          </Link>
-          {/* /////////////////////////// */}
-
-          <Link
-            to={`#`}
-            className="hover:bg-white/30 w-[490px] h-[80px] p-[10px] backdrop-blur-sm border bg-white/15 rounded-[10px] border-white/20 flex items-center justify-between transition-all hover:scale-[1.05] duration-500"
-          >
-            <div className="flex flex-row items-center gap-[10px]">
-              <div className="w-[50px] h-[50px] bg-white rounded-[50%] flex justify-center items-center  text-center font-extrabold text-[25px] text-[#1A4857]">
-                4
-              </div>
-              <p className="font-extrabold text-[25px]">TOIC Master</p>
-            </div>
-            <p className="text-[30px]">→</p>
-          </Link>
-          {/* /////////////////////////// */}
+              <p className="text-[30px]">→</p>
+            </Link>
+          ))}
         </div>
       </section>
 

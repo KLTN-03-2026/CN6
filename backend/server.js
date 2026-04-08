@@ -54,6 +54,34 @@ app.post('/tuvan',async (req, res)=>{
     }
 });
 
+////////////////////xác thực ///////////////////////
+
+const xacThuc = (req,res,next)=>{
+    
+    const token = req.header('Authorization');
+    
+    if(!token) return res.status(400).json({
+        trangThai:"hh",
+        mess:"phien dang nhap het han vui long dang nhap lai"
+    })
+    
+    try{
+        const GiaiMa = jwt.verify(token, "ToanDepTrai");
+        
+        req.user = GiaiMa;
+        
+        next();
+        
+    }
+    catch(err){
+        res.status(500).json({
+            trangThai:"tb",
+            mess:"phien dang nhap het han vui long dang nhap lai"
+        })
+        console.log("xác thực thất bại : "+err)
+    }
+}
+
 
 //////////////////   BANG TÀI KHOẢN   ////////////////////////
 
@@ -68,6 +96,7 @@ const TaiKhoanSchema = new mongoose.Schema({
 });
 
 const TaiKhoan = mongoose.model('TaiKhoan', TaiKhoanSchema);
+
 ///////////kt số điện thoại
 app.post('/dangnhap/email', async(req, res)=>{
     try{
@@ -149,32 +178,74 @@ app.post('/dangky', async (req, res)=>{
    }
 })
 
-////////////////////xác thực ///////////////////////
+// api lay thong tin tai khoan 
 
-const xacThuc = (req,res,next)=>{
-    
-    const token = req.header('Authorization');
-    
-    if(!token) return res.status(400).json({
-        trangThai:"hh",
-        mess:"phien dang nhap het han vui long dang nhap lai"
-    })
-    
+app.get('/api/lay-tt-tk', xacThuc , async(req,res)=>{
     try{
-        const GiaiMa = jwt.verify(token, "ToanDepTrai");
-        
-        req.user = GiaiMa;
-        
-        next();
-        
-    }
-    catch(err){
-        res.status(500).json({
-            trangThai:"loi",
-            mess:"phien dang nhap het han vui long dang nhap lai"
+        const Email = req.user.Email;
+        const data = await TaiKhoan.findOne({Email:Email});
+        res.status(200).json({
+            trangThai:"tc",
+            data:data
         })
+        console.log("/api/lay-tt-tk thành công")
+
+    }catch(err){
+        console.log("lay thong tin tk that bai: " + err);
+        res.status(500).json({ trangThai:"tb" })
     }
-}
+})
+
+/// api cap nhat thong tin tai khoản 
+
+app.patch('/api/cap-nhat-tt-tk',xacThuc, async(req,res)=>{
+    try{
+        const email = req.user.Email;
+        const {HoTen,NamSinh,sdt,NgheNghiep}= req.body;
+        const updateTK= await TaiKhoan.findOne({Email:email});
+        if(HoTen) updateTK.HoTen= HoTen;
+        if(NamSinh) updateTK.NamSinh= NamSinh;
+        if(sdt) updateTK.sdt= sdt;
+        if(NgheNghiep) updateTK.NgheNghiep= NgheNghiep; 
+
+        await updateTK.save();
+        console.log("thành công: /api/cap-nhat-tt-tk")
+        res.status(200).json({trangThai:"tc"});
+    }catch(err){
+        console.log(" thất bại: /api/cap-nhat-tt-tk  : "+err);
+        res.status(500).json({trangThai:"tb"});
+    }
+})
+
+///api doi mật khẩu
+
+app.patch('/api/doi-mat-khau',xacThuc, async(req,res)=>{
+    try{
+        const Email= req.user.Email;
+        const {mkCu, mkMoi} = req.body;
+        const tk = await TaiKhoan.findOne({Email:Email});
+        const mkdung = await  bcrypt.compare(mkCu,tk.mk);
+
+        if(!mkdung) {
+            console.error("sai mat khau");
+            return res.status(400).json({trangThai:"smk"});
+            
+        }
+        console.log(mkCu);
+        console.log(mkdung)
+        const giavi = await bcrypt.genSalt(10);
+        const mkbam = await bcrypt.hash(mkMoi,giavi);
+        tk.mk =mkbam;
+        await tk.save();
+        res.status(200).json({trangThai: "tc"});
+        console.log("doi mat khau thanh cong")
+    }catch(err){
+        console.log("/api/doi-mat-khau that bai: "+err);
+        res.status(500).json({trangThai:"tb"})
+    }
+})
+
+
 
 //////XÁC NHẬN OTP/////
 
@@ -374,7 +445,7 @@ const KhoaHocSchema = new mongoose.Schema({
     PhuHop:{type:String,require:true},
     Gia:{type:Number,require:true},
     Image:{type:String,require:true},
-    QuyenLoi:{type:String,require},
+    QuyenLoi:{type:String,require:true},
     PhuongPhap:{type:String,require:true},
     KetQua:{type:String,require:true}
 
@@ -504,11 +575,12 @@ app.get('/lophoc/lay/:id',async(req,res)=>{
                 mess:"hien khoa hoc nay khong co lop hoc nao "
             })
         }
+        console.log("tra ve danh sach lop hocc thanh cong");
         return res.status(200).json({
             trangThai:"tc",
             Data:Data
         })
-        console.log("tra ve danh sach lop hocc thanh cong");
+        
     }catch(err){
         console.log("lay danh sach lop hoc that bai :" +err);
         res.status(500).json({
@@ -567,11 +639,31 @@ app.patch(`/api/cap-nhat-si-so/:id`,async(req,res)=>{
         const data = await LopHoc.findById(id);
         data.SoLuong = data.SoLuong +1;
         data.save();
-        console.log("tc");
+        console.log("cap nhat si so lop tk");
         res.status(200).json({trangThai:"tc"});
     }catch(err){
         res.status(500).json({trangThai:"tb"});
         console.log("cap nhat si so that bai: "+err)
+    }
+})
+
+/// api kt si so 
+
+app.get('/api/ktSiSo/:id',async(req,res)=>{
+    try{
+        const id = req.params.id;
+        const data = await LopHoc.findById(id);
+
+        res.status(200).json({
+            trangThai:"tc",
+            mess: data.SoLuong
+        })
+        console.log("lay si so tk")
+    }catch(err){
+        console.log("kt si so that bai : " +err);
+        res.status(500).json({
+            trangThai:"tb"
+        })
     }
 })
 
@@ -652,7 +744,7 @@ const payos = new PayOS(
 // Phía dưới bạn dùng hàm payos.createPaymentLink(order) như cũ!
 // Paste đoạn này ngay dưới chỗ const payos = new PayOSClass({...});
 
-// Code tạo API đơn hàng của bạn giữ nguyên:
+
 app.post('/api/tao-don-hang', async (req, res) => {
     const { amount } = req.body; 
     const soNgauNhien = Math.floor(1000000000 + Math.random() * 9000000000)
@@ -708,13 +800,14 @@ app.get('/KTdonHang/:id', async (req, res)=>{
 ///api thêm hóa đơn
 
 const HoaDonSchema = new mongoose.Schema({
+    maHoaDon :{type:String,require:true},
     idKhoaHoc :{type:String ,require:true},
     idLopHoc:{type:String,require:true},
     email:{type:String,require:true},
     TenKhoaHoc:{type:String, require:true},
     TenLop:{type:String,require:true},
-    Gia:{type:Number,require},
-    Time :{type:Number,require}
+    Gia:{type:Number,require: true},
+    Time :{type:String,require: true}
 })
 
 const HoaDon = mongoose.model("HoaDon", HoaDonSchema);
@@ -723,14 +816,20 @@ const HoaDon = mongoose.model("HoaDon", HoaDonSchema);
 
 app.post('/api/them-hoa-don',async(req,res)=>{
     try{
-        const { idKhoaHoc,idLopHoc,email,TenKhoaHoc,TenLop,Gia}= req.body;
+         const date = new Date();
+        const vietnamTime = date.toLocaleString("vi-VN", {
+        timeZone: "Asia/Ho_Chi_Minh",
+      });
+        const {maHoaDon, idKhoaHoc,idLopHoc,email,TenKhoaHoc,TenLop,Gia}= req.body;
         const newHoaDon = new HoaDon ({
+            maHoaDon:maHoaDon,
             idKhoaHoc:idKhoaHoc,
             idLopHoc:idLopHoc,
             email:email,
             TenKhoaHoc:TenKhoaHoc,
             TenLop:TenLop,
-            Gia:Gia
+            Gia:Gia,
+            Time: vietnamTime
         });
         await newHoaDon.save();
         res.status(200).json({
@@ -775,6 +874,27 @@ app.get('/api/kt-trung-khoa-hoc', xacThuc , async (req,res)=>{
     }catch(err){
         console.log("loi /api/kt-trung-khoa-hoc :" +err);
         res.status.json({trangThai:"tb"})
+    }
+})
+
+//api lay tt hóa đơn
+
+app.get('/api/lay-tt-hoaDon',xacThuc, async(req,res)=>{
+    try{
+        const email = req.user.Email;
+        const data = await HoaDon.find({email:email});
+        if(data.length ===0){
+            console.log("tai khoan khong có hóa đơn");
+            return res.status(200).json({trangThai: "ktt"});
+            
+        }
+        return res.status(200).json({
+            trangThai: "tc",
+            data: data
+        })
+    }catch(err){
+        console.log("loi khi lay tt hóa đơn :" +err)
+        res.status(500).json({trangThai:"tb"});
     }
 })
 

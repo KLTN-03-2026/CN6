@@ -3,6 +3,7 @@ import DangNhap from "../DanhNhap";
 import { use, useEffect, useState } from "react";
 import { floor } from "firebase/firestore/pipelines";
 import { div } from "framer-motion/client";
+import Alert from "./aletr";
 
 export default function Header() {
   const ChuyenTrang = useNavigate();
@@ -11,6 +12,10 @@ export default function Header() {
 
   const [avata, setavata] = useState(false);
   const [dsKH, setdsKH] = useState<any[]>([]);
+
+  const [tb, settb] = useState(false);
+  const [ndTB, setNdTB] = useState("");
+  const [typeTB, settypeTB] = useState("w");
 
   const [Token, setToken] = useState<any>(() => {
     const check = localStorage.getItem("E-learningTK");
@@ -32,7 +37,9 @@ export default function Header() {
     try {
       localStorage.removeItem("E-learningTK");
       setToken(null);
-      alert("dang xuat thanh cong");
+      settb(true);
+      settypeTB("ss");
+      setNdTB("Đăng xuất thành công");
     } catch (err) {
       alert("dang xuat that bai: " + err);
     }
@@ -51,12 +58,17 @@ export default function Header() {
     }
   };
 
+  const TatThongBao = () => {
+    settb(false);
+  };
+
   useEffect(() => {
     layKhoaHoc();
   }, []);
 
   return (
     <>
+      {tb && <Alert type={typeTB} noiDung={ndTB} tat={TatThongBao} />}
       <div className="w-[100%] h-[50px] flex items-center px-[15px] justify-between my-[10px]  ">
         <img
           onClick={() => {
@@ -149,7 +161,7 @@ export default function Header() {
           <div className="w-[140px] flex flex-col  py-[10px] absolute bg-white border border-black/25 rounded-[20px] right-3 top-[60px] z-50">
             <Link
               className="px-[20px] border-b-black/25 border-b py-[5px] transition-all duration-300 hover:bg-[#114a53]/25"
-              to={`#`}
+              to={`/CaiDat`}
             >
               Cài đặt
             </Link>

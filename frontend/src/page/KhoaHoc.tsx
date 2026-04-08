@@ -23,6 +23,11 @@ export default function KhoaHoc() {
 
   const ChuyenTrang = useNavigate();
   const [soTien, setsoTien] = useState("");
+
+  const [tb, settb] = useState(false);
+  const [ndTB, setNdTB] = useState("");
+  const [typeTB, settypeTB] = useState("w");
+
   const layData = async () => {
     try {
       const api = await fetch(`http://localhost:3000/ChiTietKhoaHoc/${id}`);
@@ -75,11 +80,35 @@ export default function KhoaHoc() {
       if (res.trangThai) {
         ChuyenTrang(`/XNThanhToan/${id}`);
       } else if (!res.trangThai)
-        alert(
+        setNdTB(
           "ban hien đang hoc 1 khoa học khác nên không thể học khóa học này",
         );
+      batThongBao();
     } catch (err) {
       console.log("ktTrungKhoaHoc thất bại");
+    }
+  };
+
+  const batThongBao = () => {
+    settb(true);
+  };
+  const TatThongBao = () => {
+    settb(false);
+  };
+
+  const ktSiSo = async (ma: string) => {
+    try {
+      const api = await fetch(`http://localhost:3000/api/ktSiSo/${ma}`);
+      const res = await api.json();
+      console.log(res.mess);
+      if (res.mess < 30) {
+        ktTrungKhoaHoc(ma);
+      } else {
+        setNdTB("lớp đã đầy");
+        batThongBao();
+      }
+    } catch (err) {
+      console.log("loi kt sỉ số: " + err);
     }
   };
 
@@ -281,12 +310,9 @@ export default function KhoaHoc() {
                       </p>
                     </div>
                     <button
-                      onClick={() => {
-                        if (item.SoLuong < 30) {
-                          ktTrungKhoaHoc(item._id);
-                        } else {
-                          alert("lớp đã đầy");
-                        }
+                      onClick={async () => {
+                        ktSiSo(item._id);
+                        layDslop();
                       }}
                       className="px-[20px] py-[10px] bg-[#0D2A2E] text-white font-extrabold rounded-[10px] absolute right-[15px] duration-200 transition-all hover:scale-[1.05]"
                     >
@@ -306,7 +332,7 @@ export default function KhoaHoc() {
       <TuVan />
 
       <Footed />
-      <Alert />
+      {tb && <Alert type={typeTB} noiDung={ndTB} tat={TatThongBao} />}
     </>
   );
 }

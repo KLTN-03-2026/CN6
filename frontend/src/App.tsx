@@ -8,6 +8,8 @@ import "./App.css";
 import Index from "./page/index";
 import KhoaHoc from "./page/KhoaHoc";
 import XNThanhToan from "./page/xnThanhToan";
+import CaiDat from "./page/CaiDat";
+import ChatBot from "./page/componan/ChatBot";
 
 function App() {
   return (
@@ -15,6 +17,8 @@ function App() {
       <Route path="/" element={<Index />} />
       <Route path="/khoahoc/:id" element={<KhoaHoc />} />
       <Route path="/XNThanhToan/:id" element={<XNThanhToan />} />
+      <Route path="/CaiDat" element={<CaiDat />} />
+      <Route path="/ChatBot" element={<ChatBot />} />
     </Routes>
   );
 }

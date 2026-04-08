@@ -3,6 +3,7 @@ import Header from "./componan/header";
 import { useNavigate, useParams } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { div } from "framer-motion/client";
+import Alert from "./componan/aletr";
 
 export default function XNThanhToan() {
   const [chon, setchon] = useState(1);
@@ -13,11 +14,17 @@ export default function XNThanhToan() {
   const [DataTT, setDataTT] = useState<any>(null);
   const [soTien, setsoTien] = useState("");
 
+  const [tb, settb] = useState(false);
+  const [ndTB, setNdTB] = useState("");
+  const [typeTB, settypeTB] = useState("w");
+
   const [Token, setToken] = useState<any>(() => {
     const check = localStorage.getItem("E-learningTK");
     if (check) return JSON.parse(check);
     else return null;
   });
+
+  ////id lớp học
   const { id } = useParams();
   const chuyenTrang = useNavigate();
 
@@ -57,6 +64,9 @@ export default function XNThanhToan() {
       if (res.trangThai !== "tc") alert(res.mess);
       else {
         console.log("cap nhat sdt thanh cong");
+        settb(true);
+        settypeTB("ss");
+        setNdTB("Cập Nhật số điện thoại thành công");
       }
     } catch (err) {
       console.log("cap nhat that bai");
@@ -86,6 +96,7 @@ export default function XNThanhToan() {
         timeZone: "Asia/Ho_Chi_Minh",
       });
       const data = {
+        maHoaDon: DataTT.ghiChu,
         idKhoaHoc: Data.datakh._id,
         idLopHoc: Data.datalop._id,
         email: Data.datatk.Email,
@@ -149,6 +160,7 @@ export default function XNThanhToan() {
             setDataTT(null);
             themHoaDon();
             guiHoaDonEmail();
+            capNhatSiSO();
             setchon(3);
           } else if (res.trangThai === "tb") {
             console.log("chua thanh toan");
@@ -163,12 +175,31 @@ export default function XNThanhToan() {
     };
   }, [DataTT]);
 
+  const TatThongBao = () => {
+    settb(false);
+  };
+
+  const capNhatSiSO = async () => {
+    try {
+      const api = await fetch(
+        `http://localhost:3000/api/cap-nhat-si-so/${id}`,
+        {
+          method: "PATCH",
+        },
+      );
+      const req = await api.json();
+    } catch (err) {
+      console.log("cap nhat si so that bai : " + err);
+    }
+  };
+
   useEffect(() => {
     layData();
   }, []);
 
   return (
     <>
+      {tb && <Alert type={typeTB} noiDung={ndTB} tat={TatThongBao} />}
       <Header />
       {chon === 1 && (
         <div>
