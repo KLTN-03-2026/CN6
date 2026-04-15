@@ -5,7 +5,11 @@ import { floor } from "firebase/firestore/pipelines";
 import { div } from "framer-motion/client";
 import Alert from "./aletr";
 
-export default function Header() {
+interface HeaderProps {
+  type: string;
+}
+
+export default function Header({ type }: HeaderProps) {
   const ChuyenTrang = useNavigate();
   const [DN, setDN] = useState(false);
   const [drKh, setdrKh] = useState(false);
@@ -20,7 +24,7 @@ export default function Header() {
   const [Token, setToken] = useState<any>(() => {
     const check = localStorage.getItem("E-learningTK");
     if (check) return JSON.parse(check);
-    else return false;
+    else return null;
   });
 
   const dangnhap1 = (text: any) => {
@@ -69,7 +73,9 @@ export default function Header() {
   return (
     <>
       {tb && <Alert type={typeTB} noiDung={ndTB} tat={TatThongBao} />}
-      <div className="w-[100%] h-[50px] flex items-center px-[15px] justify-between my-[10px]  ">
+      <div
+        className={`w-[100%] h-[60px] flex items-center mb-[10px]  px-[15px] justify-between bg-white    ${type === "khien" && `sticky top-[0px] z-[2]`}`}
+      >
         <img
           onClick={() => {
             ChuyenTrang("/");
@@ -78,66 +84,72 @@ export default function Header() {
           alt="logo"
           className="h-[33px] cursor-pointer"
         />
-        <div className="flex gap-10 text-[#13474b] items-center relative">
-          <p
-            onClick={() => {
-              setdrKh(!drKh);
-            }}
-            className="cursor-pointer transition-all  hover:border-b border-b-[#13474b] font-medium flex items-center gap-1 justify-center"
-          >
-            khóa học{" "}
-          </p>
-          {drKh && (
-            <ul className="absolute top-[30px] z-[50] bg-white py-[10px] border-black/25 border rounded-[10px] flex flex-col gap-2 ">
-              {dsKH.map((item) => (
-                <li
-                  onClick={() => {
-                    ChuyenTrang(`/khoahoc/${item._id}`);
-                  }}
-                  className="cursor-pointer  hover:bg-[#13474b]/25 transition-all py-[5px] px-[10px]"
-                >
-                  {item.TenKhoaHoc}
-                </li>
-              ))}
-            </ul>
-          )}
-          {drKh && (
-            <div
+        {type === "hien" && (
+          <div className="flex gap-10 text-[#13474b] items-center relative">
+            <p
               onClick={() => {
                 setdrKh(!drKh);
               }}
-              className="fixed z-[30]  w-screen left-0 h-screen top-0"
-            ></div>
-          )}
-          <Link
-            className="transition-all  hover:border-b border-b-[#13474b] font-medium"
-            to={`#`}
-          >
-            kiểm tra đầu vào
-          </Link>
-          <Link
-            className="transition-all  hover:border-b border-b-[#13474b] font-medium"
-            to={`#`}
-          >
-            luyện đề
-          </Link>
-          <Link
-            className="transition-all  hover:border-b border-b-[#13474b] font-medium"
-            to={`#`}
-          >
-            Thi Thử
-          </Link>
-        </div>
+              className="cursor-pointer transition-all  hover:border-b border-b-[#13474b] font-medium flex items-center gap-1 justify-center"
+            >
+              khóa học{" "}
+            </p>
+            {drKh && (
+              <ul className="absolute top-[30px] z-[50] bg-white py-[10px] border-black/25 border rounded-[10px] flex flex-col gap-2 ">
+                {dsKH.map((item) => (
+                  <li
+                    onClick={() => {
+                      ChuyenTrang(`/khoahoc/${item._id}`);
+                    }}
+                    className="cursor-pointer  hover:bg-[#13474b]/25 transition-all py-[5px] px-[10px]"
+                  >
+                    {item.TenKhoaHoc}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {drKh && (
+              <div
+                onClick={() => {
+                  setdrKh(!drKh);
+                }}
+                className="fixed z-[30]  w-screen left-0 h-screen top-0"
+              ></div>
+            )}
+            <Link
+              className="transition-all  hover:border-b border-b-[#13474b] font-medium"
+              to={`#`}
+            >
+              kiểm tra đầu vào
+            </Link>
+            <Link
+              className="transition-all  hover:border-b border-b-[#13474b] font-medium"
+              to={`#`}
+            >
+              luyện đề
+            </Link>
+            <Link
+              className="transition-all  hover:border-b border-b-[#13474b] font-medium"
+              to={`#`}
+            >
+              Thi Thử
+            </Link>
+          </div>
+        )}
+
         <div className="flex gap-3 items-center">
-          <button
-            className="bg-[#114a53] px-[20px] py-[10px] text-white rounded-[15px] text-[15px] font-medium"
-            onClick={() => {
-              if (Token !== null) ChuyenTrang("#");
-              else setDN(true);
-            }}
-          >
-            Bắt đầu
-          </button>
+          {type === "hien" && (
+            <button
+              className="bg-[#114a53] px-[20px] py-[10px] text-white rounded-[15px] text-[15px] font-medium"
+              onClick={() => {
+                if (Token !== null) ChuyenTrang("/HocVien/QlHocTap");
+                else setDN(true);
+              }}
+            >
+              Bắt đầu
+            </button>
+          )}
+
           {Token !== null && (
             <img
               onClick={() => {

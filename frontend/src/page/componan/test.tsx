@@ -1,47 +1,24 @@
-import { motion } from "framer-motion";
-
 export default function Test() {
   return (
-    <>
-      return (
-      <div className="flex flex-col items-center space-y-[50vh] py-20">
-        {/* Hiệu ứng bay từ dưới lên */}
-        <motion.h2
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          viewport={{ once: false }} // Chỉ chạy 1 lần khi cuộn tới
-          className="text-5xl font-bold text-[#AFD0D9]"
-        >
-          Chữ hiện ra khi lướt tới
-        </motion.h2>
+    // 1. Thẻ Ông Nội: Chứa perspective và thêm class 'group' để bắt sự kiện hover
+    <div className="w-[300px] h-[400px] bg-transparent cursor-pointer [perspective:1000px] group">
+      {/* 2. Thẻ Cha (Trục xoay): Đặt thời gian xoay 700ms, tự xoay 180 độ khi hover */}
+      <div className="relative w-full h-full transition-transform duration-700 [transform-style:preserve-3d] group-hover:[transform:rotateY(180deg)]">
+        {/* 3A. Mặt Trước (Front Face) */}
+        <div className="absolute w-full h-full [backface-visibility:hidden] bg-white border border-gray-200 rounded-xl shadow-lg flex flex-col items-center justify-center text-[#0D2A2E]">
+          <h2 className="text-4xl font-extrabold mb-4">MẶT TRƯỚC</h2>
+          <p>Từ vựng tiếng Anh</p>
+        </div>
 
-        {/* Hiệu ứng hiện từng chữ một (Stagger) */}
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          transition={{ duration: 1.5 }}
-          viewport={{ once: false, amount: 0.5 }}
-          variants={{
-            visible: { transition: { staggerChildren: 0.1 } },
-            hidden: {},
-          }}
-          className="text-3xl flex gap-2"
-        >
-          {["Học", "TOEIC", "Thật", "Dễ"].map((word, i) => (
-            <motion.span
-              key={i}
-              variants={{
-                visible: { opacity: 1, scale: 1, y: 0 },
-                hidden: { opacity: 0, scale: 0.5, y: 50 },
-              }}
-            >
-              {word}
-            </motion.span>
-          ))}
-        </motion.div>
+        {/* 3B. Mặt Sau (Back Face): Bị xoay ngược sẵn 180 độ từ lúc mới sinh ra */}
+        <div className="absolute w-full h-full [backface-visibility:hidden] [transform:rotateY(180deg)] bg-[#0D2A2E] rounded-xl shadow-lg flex flex-col items-center justify-center text-white">
+          <h2 className="text-4xl font-extrabold mb-4">MẶT SAU</h2>
+          <p>Nghĩa của từ</p>
+          <button className="mt-5 px-4 py-2 bg-[#C3E4EC] text-[#0D2A2E] font-bold rounded-lg">
+            Đã thuộc!
+          </button>
+        </div>
       </div>
-      );
-    </>
+    </div>
   );
 }

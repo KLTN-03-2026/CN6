@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import DangNhap from "./DanhNhap";
 import { useEffect, useState } from "react";
+import ChatBot from "./componan/ChatBot";
 export default function Index() {
   const [DataKH, setDataKh] = useState<any[]>([]);
   const layDataKh = async () => {
@@ -25,8 +26,8 @@ export default function Index() {
 
   return (
     <>
-      <Header></Header>
-
+      <Header type="hien" />
+      <ChatBot />
       {/* ///////////////////phần bìa//////////////// */}
       <section className="w-auto h-[700px] bg-blue-300 mx-3 rounded-[10px] overflow-hidden relative flex justify-center items-center">
         <img

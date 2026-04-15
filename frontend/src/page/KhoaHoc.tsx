@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { data, useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Alert from "./componan/aletr";
+import ChatBot from "./componan/ChatBot";
 
 export default function KhoaHoc() {
   const { id } = useParams();
@@ -77,8 +78,9 @@ export default function KhoaHoc() {
         headers: { Authorization: Token, "Content-Type": "application/json" },
       });
       const res = await api.json();
+      console.log(res);
       if (res.trangThai) {
-        ChuyenTrang(`/XNThanhToan/${id}`);
+        // ChuyenTrang(`/XNThanhToan/${id}`);
       } else if (!res.trangThai)
         setNdTB(
           "ban hien đang hoc 1 khoa học khác nên không thể học khóa học này",
@@ -119,7 +121,8 @@ export default function KhoaHoc() {
 
   return (
     <>
-      <Header />
+      <Header type="hien" />
+      <ChatBot />
       <section className="mx-[20px] bg-[#d8f8ff] h-[680px] rounded-[20px] p-[20px] flex justify-between ">
         <div className="p-[50px] flex flex-col gap-[20px] w-[880.61px] ">
           {TenKhoaHoc.length > 0 && (

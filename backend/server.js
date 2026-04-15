@@ -75,7 +75,7 @@ const xacThuc = (req,res,next)=>{
     }
     catch(err){
         res.status(500).json({
-            trangThai:"tb",
+            trangThai:"hh",
             mess:"phien dang nhap het han vui long dang nhap lai"
         })
         console.log("xác thực thất bại : "+err)
@@ -122,7 +122,8 @@ app.post('/dangnhap/dn', async(req, res)=>{
         const {Email, mk}= req.body;
         
         const check = await TaiKhoan.findOne({Email:Email});
-        const matKhauDung = await bcrypt.compare(mk,check.mk)
+        const matKhauDung = await bcrypt.compare(mk,check.mk);
+       
         if(!matKhauDung) return res.status(400).json({
             trangThai:"smk"
         })
@@ -134,6 +135,7 @@ app.post('/dangnhap/dn', async(req, res)=>{
                 {expiresIn:"5h"}
                 
             );
+            
             res.status(200).json({
                 trangThai:"thanhCong",
                 Token: theVip
@@ -590,6 +592,8 @@ app.get('/lophoc/lay/:id',async(req,res)=>{
     }
 })
 
+
+
 /// api them lop hoc 
 
 app.post('/lophoc/them',async(req,res)=>{
@@ -676,7 +680,7 @@ app.get('/XNThanhToan/:id',xacThuc,async(req,res)=>{
         
         const idLopHoc = req.params.id;
         const email = req.user.Email;
-
+        console.log(email);
         const dataLopHoc = await LopHoc.findById(idLopHoc);
         const dataTk = await TaiKhoan.findOne({Email:email});
         const dataKH = await KhoaHoc.findById(dataLopHoc.idKhoaHoc);
@@ -685,6 +689,7 @@ app.get('/XNThanhToan/:id',xacThuc,async(req,res)=>{
             datatk: dataTk,
             datakh: dataKH,
         }
+        
         res.status(200).json({
             trangThai:"tc",
             data : data
@@ -854,21 +859,23 @@ app.get('/api/kt-trung-khoa-hoc', xacThuc , async (req,res)=>{
         const email = req.user.Email;
 
         const checkHD = await HoaDon.find({email:email});
-       console.log(checkHD.length);
+      
         if(checkHD.length === 0) return res.status(200).json({
             trangThai : true
         })
+
+        let sokt =0;
          
         for(let i=0; i<checkHD.length; i++){
             const checkLH = await LopHoc.findById(checkHD[i].idLopHoc);
-            if(checkLH.trangThai ==="ketThuc" || checkLH.trangThai ==="an"){
+            if(checkLH.trangThai !=="ketThuc" || checkLH.trangThai !=="an"){
                 return res.status(200).json({
-                trangThai : true
+                trangThai : false
         })
             }
         }
         
-        return res.status(200).json({ trangThai : false})
+        return res.status(200).json({ trangThai : true})
         
 
     }catch(err){
@@ -897,6 +904,389 @@ app.get('/api/lay-tt-hoaDon',xacThuc, async(req,res)=>{
         res.status(500).json({trangThai:"tb"});
     }
 })
+
+///api lay ten và id lop hoc 
+
+app.get('/api/ten-id-lopHoc',xacThuc, async(req,res)=>{
+    try{
+        let data =[];
+        const email = req.user.Email;
+        const dsHoaDown = await HoaDon.find({email:email}).select('idLopHoc  TenKhoaHoc TenLop');
+       
+        if(dsHoaDown.length === 0){
+            return res.status(404).json({trangThai:"ktt"});
+        }
+        for(const item of dsHoaDown){
+            const check = await LopHoc.findById(item.idLopHoc).select('trangThai');
+            const them ={
+            idLopHoc:item.idLopHoc,
+            TenKhoaHoc: item.TenKhoaHoc,
+            TenLop : item.TenLop,
+            trangThai: check.trangThai
+            }
+            data.push(them);
+            
+        }
+       
+        console.log("/api/ten-id-lopHoc thành công");
+        return res.status(200).json({
+            trangThai:"tc",
+            data: data
+        })
+        
+        
+
+    }catch(err){
+        console.log("loi /api/ten-id-lopHoc : " +err);
+        res.status(500).json({trangThai:"tb"})
+    }
+})
+
+
+////////////// CHAT BOT AI//////////
+
+require('dotenv').config();
+const Groq = require("groq-sdk");
+const groq = new Groq(process.env.GROQ_API_KEY);
+
+/// api tạo tin nhắn 
+
+app.post('/api/tap-tn-ai',async(req,res)=>{
+    try{
+        const {message , LichSuChat} = req.body;
+
+        const dataKH = await KhoaHoc.find().select('_id TenKhoaHoc DauRa PhuHop Gia QuyenLoi PhuongPhap KetQua');
+        const duLieuKH = JSON.stringify(dataKH);
+        const dataLH =  await LopHoc.find();
+        const duLieuLH = JSON.stringify(dataLH);
+        const duLieuLSC =JSON.stringify(LichSuChat);
+
+        // const model = genAI.getGenerativeModel({ 
+        //     model: "gemini-2.5-flash",
+        //     // systemInstruction chính là "Khuôn mẫu nhân cách" và "Kiến thức"
+        //     systemInstruction: `
+        //         Bạn là tư vấn viên ảo của hệ thống E-learning. 
+        //         Dưới đây là danh sách toàn bộ các khóa học và lớp học của từng khóa hiện có hiện có trong hệ thống (dữ liệu JSON):
+        //         ${duLieuKH}
+        //          ${duLieuLH}
+        //         Đây là lịch sử chat trước đó để bạn có thể hiêu ngữ cảnh hơn :
+        //         ${duLieuLSC}
+
+        //         Nguyên tắc:
+        //         1. CHỈ tư vấn dựa trên danh sách khóa học và lớp học ở trên. Không bịa đặt thêm khóa học ngoài.
+        //         2. Nếu người dùng hỏi khóa học không có trong danh sách, hãy báo là hệ thống chưa có và gợi ý khóa học gần giống nhất.
+        //         3. Trả lời thân thiện, xưng "mình" và gọi "bạn", format chữ thuần túy, không dùng dấu sao (**).
+        //     `
+        // });
+
+        const tinNhanHeThong = {
+            role: "system",
+            content: `Bạn là tư vấn viên ảo của hệ thống E-learning. 
+                Dưới đây là danh sách toàn bộ các khóa học và lớp học của từng khóa hiện có hiện có trong hệ thống (dữ liệu JSON):
+                ${duLieuKH}
+                 ${duLieuLH}
+                Đây là lịch sử chat trước đó để bạn có thể hiêu ngữ cảnh hơn :
+                ${duLieuLSC}
+
+                Nguyên tắc:
+                1. CHỈ tư vấn dựa trên danh sách khóa học và lớp học ở trên. Không bịa đặt thêm khóa học ngoài.
+                2. Nếu người dùng hỏi khóa học không có trong danh sách, hãy báo là hệ thống chưa có và gợi ý khóa học gần giống nhất.
+                3. Trả lời thân thiện, xưng "mình" và gọi "bạn", format chữ thuần túy, không dùng dấu sao (**).
+                4. Trả lời thật ngắn gọn, súc tích (dưới 100 chữ nếu có thể).
+                `
+                
+        };
+        // const prompt = `
+        //     Bạn là một trợ lý tư vấn học tập ảo của một nền tảng E-learning. 
+        //     Nhiệm vụ của bạn là giải đáp thắc mắc về các khóa học .
+        //     Nguyên tắc trả lời:
+        //     1. Luôn xưng là "mình" và gọi người dùng là "bạn". Thái độ nhiệt tình, thân thiện.
+        //     2. Trả lời thật ngắn gọn, súc tích (dưới 100 chữ nếu có thể).
+        //     3. Tuyệt đối không dùng các ký hiệu định dạng phức tạp (như in đậm **, dấu sao *), chỉ dùng văn bản thuần túy.
+            
+        //     Câu hỏi của học viên là: "${message}"
+        // `;
+
+        const messages = [
+            tinNhanHeThong, 
+            { role: "user", content: message }
+        ];
+
+        const chatCompletion = await groq.chat.completions.create({
+            messages: messages,
+            model: "llama-3.3-70b-versatile", // Dùng Llama 3 70B của Meta (Facebook) cực kỳ thông minh
+            temperature: 0.5, // Số từ 0 đến 1 (0.5 là vừa đủ cân bằng giữa sáng tạo và chính xác)
+        });
+
+        const responseText = chatCompletion.choices[0]?.message?.content || "Xin lỗi, mình bị lỡ nhịp. Bạn nói lại nhé!";
+
+        
+        // Rút trích đoạn text câu trả lời từ kết quả
+       
+       
+        // Trả về cho Frontend React
+        return res.status(200).json({
+            trangThai:"tc",
+            mess: responseText });
+        
+    }catch(err){
+        console.log("loi chat bot ai: "+err);
+        res.status(500).json({
+            trangThai:"tb"
+        })
+    }
+})
+
+///////////////Bang lop hoc online/////////////////////////////////////
+
+const lopHocOnlineSchemal = new mongoose.Schema({
+    idLopHoc:{type:String,require :true},
+    tenLH: {type:String, require :true},
+    linkLop:{type:String,require:true}
+})
+
+const lopHocOnline =  mongoose.model("lopHocOnline",lopHocOnlineSchemal);
+
+///api lay tt lop on
+
+app.get('/api/lay-lopHocon/:id',async(req,res)=>{
+    try{
+        const id = req.params.id;
+        const data = await lopHocOnline.find({idLopHoc:id});
+        if(data === 0) return res.status(404).json({trangThai:"ktt"});
+        return res.status(200).json({
+            trangThai: "tc",
+            data:data
+        })
+    }catch(err){
+        console.log("/api/lay-lopHocon/:id THAT BAI");
+        res.status(500).json({
+            trangThai :"tb"
+        })
+    }
+})
+
+app.post('/api/them-lopHocon/:id',async(req,res)=>{
+    try{
+        const {tenLH, linkLop} = req.body;
+        const idLopHoc = req.params.id;
+
+        const newLopHocOnline = new lopHocOnline({
+            idLopHoc:idLopHoc,
+            tenLH:tenLH,
+            linkLop:linkLop
+        })
+
+        await newLopHocOnline.save();
+        console.log("/api/them-lopHocon/:id THÀNH CÔNG");
+        res.status(201).json({trangThai:"tc"});
+
+    }catch(err){
+        console.log("them lop hoc on that bai: "+err);
+        res.status(500).json({trangThai:"tb"});
+    }
+})
+
+
+/////////////////// bang cong dong //////////////////////////
+
+const CongDongSchemal = new mongoose.Schema({
+    idLopHoc:{type:String,require:true},
+    tenCD: {type:String, require :true},
+    linkCD:{type:String,require:true}
+})
+
+const CongDong = mongoose.model("CongDong", CongDongSchemal);
+
+
+app.get('/api/lay-CongDong/:id',async(req,res)=>{
+    try{
+        const id = req.params.id;
+        const data = await CongDong.find({idLopHoc:id});
+        if(data.length === 0) return res.status(404).json({trangThai:"ktt"});
+        console.log("tra vè data cộng đồng thành công");
+        console.log(data)
+        return res.status(200).json({
+            trangThai: "tc",
+            data:data
+        })
+    }catch(err){
+        console.log("'/api/lay-CongDong/:id THAT BAI");
+        res.status(500).json({
+            trangThai :"tb"
+        })
+    }
+})
+
+app.post('/api/them-CongDong/:id',async(req,res)=>{
+    try{
+        const {tenCD, linkCD} = req.body;
+        const idLopHoc = req.params.id;
+
+        const newCongDong = new CongDong({
+            idLopHoc:idLopHoc,
+            tenCD:tenCD,
+            linkCD:linkCD
+        })
+        await newCongDong.save();
+        console.log("/api/them-CongDong/:id THÀNH CÔNG");
+        res.status(201).json({trangThai:"tc"});
+
+    }catch(err){
+        console.log("/api/them-CongDong/:id "+err);
+        res.status(500).json({trangThai:"tb"});
+    }
+})
+
+
+
+/////////bang tu vung /////////////////
+
+const TuVungSchemal = new mongoose.Schema({
+    idKhoaHoc:{type:String,require:true},
+    idLopHoc:{type:String,require:true},
+    Email:{type:String,require:true},
+    VaiTroNguoiThem:{type:String,require:true},
+    TenTuVung:{type:String,require:true},
+    tuVung:{type:String,require:true}
+})
+
+const TuVung = mongoose.model("TuVung",TuVungSchemal);
+
+/// api them từ vựng 
+
+app.post('/api/them-TuVung/:id',xacThuc , async(req,res)=>{
+    try{
+        const idLopHoc = req.params.id;
+        const idKhoaHoc = await LopHoc.findById(idLopHoc).select('idKhoaHoc');
+        const Email = req.user.Email;
+        const VaiTroNguoiThem = req.user.VaiTro;
+        const {tuVung, TenTuVung } = req.body;
+        
+
+
+        const newTuVung = new TuVung({
+            idKhoaHoc : idKhoaHoc.idKhoaHoc,
+            idLopHoc: idLopHoc,
+            Email:Email,
+            VaiTroNguoiThem:VaiTroNguoiThem,
+            TenTuVung: TenTuVung,
+            tuVung:tuVung
+        })
+        
+        await newTuVung.save();
+        console.log("them tu vung thanh cong");
+        res.status(201).json({trangThai:"tc"});
+
+
+    }catch(err){
+        console.log("them từ vựng thất bại :"+err);
+        res.status(500).json({trangThai:"tb"})
+    }
+})
+
+//api lay danh sach tu vung cua hoc vien
+ 
+app.get('/api/lay-tuVung-hv/:id', xacThuc,async(req,res)=>{
+    try{
+    const idLopHoc = req.params.id;
+    const email = req.user.Email;
+    const dataTuVung = await TuVung.find({idLopHoc:idLopHoc , Email:email ,VaiTroNguoiThem :'Học Viên'}).select(`_id TenTuVung`);
+    if(dataTuVung.length===0){
+        return res.status(404).json({trangThai:"ktt"});
+    }
+    return res.status(200).json({trangThai:"tc",
+        data: dataTuVung
+    })
+    }catch(err){
+        console.log("lay tu vung that bai");
+        res.status(500).json({trangThai :"tb"});
+    }
+})
+
+//// api lay danh sach tu vung trung tâm
+app.get('/api/layDanhSachTuVung-Gv/:id', async (req,res)=>{
+    try{
+        const idLopHoc = req.params.id;
+        const dataKhoaHoc = await LopHoc.findById(idLopHoc).select('idKhoaHoc');
+        const idKhoaHoc = dataKhoaHoc.idKhoaHoc
+        
+        const dataTuVung = await TuVung.find({idKhoaHoc: idKhoaHoc , $or :[
+            {VaiTroNguoiThem: 'Giao Vien'},
+            {VaiTroNguoiThem: 'admin'}
+        ]}).select('_id TenTuVung');
+        if(dataTuVung.length===0){
+        return res.status(404).json({trangThai:"ktt"});
+        }
+        return res.status(200).json({trangThai:"tc",
+            data: dataTuVung
+        })
+
+    }catch(err){
+        console.log("lay danh sach tu vung E-learning that bại: "+err);
+        res.status(500).json({trangThai:"tb"});
+    }
+})
+
+/// api lay chi tiet tu vung
+
+app.get(`/api/lay-tuvung-chitiet/:id`,async(req,res)=>{
+    try{
+        const idTuVung = req.params.id;
+
+        const data= await TuVung.findById(idTuVung).select('TenTuVung tuVung idLopHoc');
+
+        res.status(200).json({
+            trangThai:"tc",
+            data:data
+        })
+        console.log(`/api/lay-tuvung-chitiet/${idTuVung} thành cong`)
+     
+
+    }catch(err){
+        console.log("lay chi tiet từ vựng thất bại :  /api/lay-tuvung-chitiet/:id : "+err)
+        res.status(500).json({trangThai:"tb"})
+    }
+})
+
+app.patch('/api/capNhatTuVung/:id', async(req,res)=>{
+    try{
+        const idTuVung = req.params.id;
+        const {TenTuVung, tuVung} = req.body;
+
+        const updateTuVung = await TuVung.findById(idTuVung);
+
+        updateTuVung.TenTuVung = TenTuVung;
+        updateTuVung.tuVung = tuVung;
+
+        await updateTuVung.save();
+        console.log(`/api/capNhatTuVung/${idTuVung} thành công 💚`);
+        res.status(200).json({trangThai:"tc"})
+
+    }catch(err){
+        console.log("/api/capNhatTuVung/:id That bai: "+err );
+        res.status(500).json({trangThai:"tb"})
+    }
+})
+
+///api xoa tu vung 
+app.delete('/api/xoaTuVung/:id',async(req,res)=>{
+    try{
+        const idTuVung = req.params.id;
+
+        const data= await TuVung.findByIdAndDelete(idTuVung);
+
+        
+        console.log("xoa tu vung thanh cong 💚");
+        res.status(200).json({trangThai:"tc"})
+    }catch(err){
+        console.log("xoa tu vung that bai ❤️ : " +err);
+        res.status(500).json({trangThai:"tb"})
+    }
+})
+
+
+
 
 //////////////////////////////////////////////////////////////////
 app.listen(port,()=>{

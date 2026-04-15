@@ -11,6 +11,12 @@ export default function Alert({ type, noiDung, tat }: AlertProps) {
 
   useEffect(() => {
     setbattat(true);
+    setTimeout(() => {
+      setbattat(false);
+      setTimeout(() => {
+        tat();
+      }, 400);
+    }, 5000);
   }, []);
 
   return (
@@ -50,7 +56,7 @@ export default function Alert({ type, noiDung, tat }: AlertProps) {
           {type === "ss" && "Thành Công"}
         </h3>
 
-        <p className="text-black/75">{noiDung}</p>
+        <p className="text-black/75 max-w-[300px]">{noiDung}</p>
       </div>
       <img
         onClick={() => {

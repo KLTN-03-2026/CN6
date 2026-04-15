@@ -170,7 +170,7 @@ export default function CaiDat() {
 
   return (
     <>
-      <Header />
+      <Header type="hien" />
       {tb && <Alert type={typeTB} noiDung={ndTB} tat={TatThongBao} />}
 
       <section className="w-full mt-[30px] justify-center flex">

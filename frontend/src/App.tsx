@@ -10,6 +10,10 @@ import KhoaHoc from "./page/KhoaHoc";
 import XNThanhToan from "./page/xnThanhToan";
 import CaiDat from "./page/CaiDat";
 import ChatBot from "./page/componan/ChatBot";
+import HocVien_QlHocTap from "./page/HocVien_QLhocTap";
+import HV_QlLopHoc from "./page/HV_QlLopHoc";
+import HocTuVung from "./page/HocTuVung";
+import Test from "./page/componan/test";
 
 function App() {
   return (
@@ -18,7 +22,10 @@ function App() {
       <Route path="/khoahoc/:id" element={<KhoaHoc />} />
       <Route path="/XNThanhToan/:id" element={<XNThanhToan />} />
       <Route path="/CaiDat" element={<CaiDat />} />
-      <Route path="/ChatBot" element={<ChatBot />} />
+      <Route path="/HocVien/QlHocTap" element={<HocVien_QlHocTap />} />
+      <Route path="/HocVien/QlLopHoc/:id" element={<HV_QlLopHoc />} />
+      <Route path="/HocVien/HocTuVung/:id" element={<HocTuVung />} />
+      <Route path="/Test" element={<Test />} />
     </Routes>
   );
 }

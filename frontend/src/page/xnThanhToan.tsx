@@ -200,7 +200,7 @@ export default function XNThanhToan() {
   return (
     <>
       {tb && <Alert type={typeTB} noiDung={ndTB} tat={TatThongBao} />}
-      <Header />
+      <Header type="hien" />
       {chon === 1 && (
         <div>
           <div className="mx-[30px] my-[30px] flex gap-[30px] text-[15px]">
@@ -215,7 +215,7 @@ export default function XNThanhToan() {
               </div>
               <p>Email (*)</p>
               <p className="p-[10px] text-[rgba(0,0,0,0.7)] border border-black/20 rounded-[10px] focus:outline-none">
-                {Data?.datatk.Email}
+                {Data?.datatk?.Email}
               </p>
               <p className="text-[12px] text-[rgba(0,0,0,0.5)]">
                 Địa chỉ email của bạn là bắt buộc để nhận biên lai, kích hoạt
@@ -227,7 +227,7 @@ export default function XNThanhToan() {
                 type="text"
                 className="p-[10px] border border-black/20 rounded-[10px] focus:outline-none"
                 placeholder="diền số điện thoại của bạn vào đây"
-                defaultValue={`${Data?.datatk.sdt || ""}`}
+                defaultValue={`${Data?.datatk?.sdt || ""}`}
                 ref={inSdt}
               />
               <div className="flex gap-2 cursor-pointer">

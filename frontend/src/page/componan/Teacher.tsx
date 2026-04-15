@@ -65,11 +65,11 @@ export default function Teacher() {
           onClick={() => {
             setchon(1);
           }}
-          className={`w-[290px] p-[10px] flex justify-center items-center z-[30] flex-col cursor-pointer duration-1000 transition-all 
-            ${chon === 2 && `absolute z-[20] translate-x-[-280px] scale-[0.8]  opacity-[0.8]`}
-            ${chon === 3 && `absolute z-[-10] translate-x-[-550px] scale-[0.6]  opacity-[0.6]`}
-            ${chon === 4 && `absolute z-[-10] translate-x-[550px] scale-[0.6]  opacity-[0.6]`}
-            ${chon === 5 && `absolute z-[20] translate-x-[280px] scale-[0.8]  opacity-[0.8]`}
+          className={`w-[290px] p-[10px] flex justify-center items-center z-[3] flex-col cursor-pointer duration-1000 transition-all 
+            ${chon === 2 && `absolute z-[2] translate-x-[-280px] scale-[0.8]  opacity-[0.8]`}
+            ${chon === 3 && `absolute z-[-2] translate-x-[-550px] scale-[0.6]  opacity-[0.6]`}
+            ${chon === 4 && `absolute z-[-2] translate-x-[550px] scale-[0.6]  opacity-[0.6]`}
+            ${chon === 5 && `absolute z-[2] translate-x-[280px] scale-[0.8]  opacity-[0.8]`}
           `}
         >
           <img src="/gv5.png" alt="gv1" className="w-[100%]" />
@@ -112,11 +112,11 @@ export default function Teacher() {
           onClick={() => {
             setchon(2);
           }}
-          className={`w-[290px] p-[10px] flex justify-center items-center z-[30] flex-col cursor-pointer  transition-all duration-1000 
-            ${chon === 1 && `absolute z-[20] translate-x-[280px] scale-[0.8] opacity-[0.8] `}
-            ${chon === 3 && `absolute z-[20] translate-x-[-280px] scale-[0.8] opacity-[0.8] `}
-            ${chon === 4 && `absolute z-[-10] translate-x-[-550px] scale-[0.6] opacity-[0.6] `}
-            ${chon === 5 && `absolute z-[-10] translate-x-[550px] scale-[0.6] opacity-[0.6] `}
+          className={`w-[290px] p-[10px] flex justify-center items-center z-[3] flex-col cursor-pointer  transition-all duration-1000 
+            ${chon === 1 && `absolute z-[2] translate-x-[280px] scale-[0.8] opacity-[0.8] `}
+            ${chon === 3 && `absolute z-[2] translate-x-[-280px] scale-[0.8] opacity-[0.8] `}
+            ${chon === 4 && `absolute z-[-2] translate-x-[-550px] scale-[0.6] opacity-[0.6] `}
+            ${chon === 5 && `absolute z-[-2] translate-x-[550px] scale-[0.6] opacity-[0.6] `}
             
             `}
         >
@@ -160,11 +160,11 @@ export default function Teacher() {
           onClick={() => {
             setchon(3);
           }}
-          className={`w-[290px] p-[10px] flex justify-center items-center flex-col cursor-pointer transition-all z-[30] duration-1000 
-            ${chon === 1 && `absolute  z-[-10] translate-x-[550px] scale-[0.6] opacity-[0.6]`}
-            ${chon === 2 && `absolute z-[20] translate-x-[280px] scale-[0.8] opacity-[0.8] `}
-            ${chon === 4 && `absolute z-[20] translate-x-[-280px] scale-[0.8] opacity-[0.8] `}
-            ${chon === 5 && `absolute z-[-10] translate-x-[-550px] scale-[0.6] opacity-[0.6] `}
+          className={`w-[290px] p-[10px] flex justify-center items-center flex-col cursor-pointer transition-all z-[3] duration-1000 
+            ${chon === 1 && `absolute  z-[-2] translate-x-[550px] scale-[0.6] opacity-[0.6]`}
+            ${chon === 2 && `absolute z-[2] translate-x-[280px] scale-[0.8] opacity-[0.8] `}
+            ${chon === 4 && `absolute z-[2] translate-x-[-280px] scale-[0.8] opacity-[0.8] `}
+            ${chon === 5 && `absolute z-[-2] translate-x-[-550px] scale-[0.6] opacity-[0.6] `}
             
             `}
         >
@@ -206,11 +206,11 @@ export default function Teacher() {
           onClick={() => {
             setchon(4);
           }}
-          className={`w-[290px] p-[10px] flex justify-center items-center flex-col cursor-pointer transition-all z-[30] duration-1000 
-            ${chon === 1 && `absolute z-[-10] translate-x-[-550px] scale-[0.6] opacity-[0.6] `}
-            ${chon === 2 && `absolute z-[-10] translate-x-[550px] scale-[0.6] opacity-[0.6] `}
-            ${chon === 3 && `absolute z-[20] translate-x-[280px] scale-[0.8] opacity-[0.8] `}
-            ${chon === 5 && `absolute z-[20] translate-x-[-280px] scale-[0.8] opacity-[0.8] `}
+          className={`w-[290px] p-[10px] flex justify-center items-center flex-col cursor-pointer transition-all z-[3] duration-1000 
+            ${chon === 1 && `absolute z-[-2] translate-x-[-550px] scale-[0.6] opacity-[0.6] `}
+            ${chon === 2 && `absolute z-[-2] translate-x-[550px] scale-[0.6] opacity-[0.6] `}
+            ${chon === 3 && `absolute z-[2] translate-x-[280px] scale-[0.8] opacity-[0.8] `}
+            ${chon === 5 && `absolute z-[2] translate-x-[-280px] scale-[0.8] opacity-[0.8] `}
             
             
             `}
@@ -255,11 +255,11 @@ export default function Teacher() {
           onClick={() => {
             setchon(5);
           }}
-          className={`w-[290px] p-[10px] flex justify-center items-center flex-col cursor-pointer transition-all z-[30] duration-1000 
-            ${chon === 1 && `absolute z-[20] translate-x-[-280px] scale-[0.8] opacity-[0.8] `}
-            ${chon === 2 && `absolute z-[-10] translate-x-[-550px] scale-[0.6] opacity-[0.6]  `}
-            ${chon === 3 && `absolute z-[-10] translate-x-[550px] scale-[0.6] opacity-[0.6] `}
-            ${chon === 4 && `absolute z-[20] translate-x-[280px] scale-[0.8] opacity-[0.8] `}
+          className={`w-[290px] p-[10px] flex justify-center items-center flex-col cursor-pointer transition-all z-[3] duration-1000 
+            ${chon === 1 && `absolute z-[2] translate-x-[-280px] scale-[0.8] opacity-[0.8] `}
+            ${chon === 2 && `absolute z-[-2] translate-x-[-550px] scale-[0.6] opacity-[0.6]  `}
+            ${chon === 3 && `absolute z-[-2] translate-x-[550px] scale-[0.6] opacity-[0.6] `}
+            ${chon === 4 && `absolute z-[2] translate-x-[280px] scale-[0.8] opacity-[0.8] `}
             
             
             
