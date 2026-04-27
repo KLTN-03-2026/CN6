@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { data, useNavigate, useParams } from "react-router-dom";
 import ThemSuaTuVung from "./ThemSuaTuVung";
 import BoxDanhSachTuVung from "./boxDanhSachTuVung";
+import Alert from "./aletr";
 
 export default function Hv_QlTuVung() {
   const inTeara = useRef<HTMLTextAreaElement>(null);
@@ -20,9 +21,16 @@ export default function Hv_QlTuVung() {
   const [ThemTv, setThemTV] = useState(false);
   const [chon, setchon] = useState(1);
 
+  const [tb, settb] = useState(false);
+  const [ndTB, setNdTB] = useState("");
+  const [typeTB, settypeTB] = useState("w");
+
   const { id } = useParams();
 
   const chuyenTrang = useNavigate();
+  const TatThongBao = () => {
+    settb(false);
+  };
 
   const them = async () => {
     try {
@@ -32,6 +40,11 @@ export default function Hv_QlTuVung() {
         body: JSON.stringify({ tuVung: inTeara.current?.value || "" }),
       });
       const req = await api.json();
+      if (req.trangThai === "hh") {
+        settb(true);
+        settypeTB("w"); // w , err
+        setNdTB("Phiên đăng nhập hết hạn vui lòng đăng nhập lại");
+      }
     } catch (err) {
       console.log(err);
     }
@@ -68,6 +81,10 @@ export default function Hv_QlTuVung() {
       } else if (req.trangThai === "tc") {
         setAlTuVung(false);
         setDataTuVungTT(req.data);
+      } else if (req.trangThai === "hh") {
+        settb(true);
+        settypeTB("w"); // w , err
+        setNdTB("Phiên đăng nhập hết hạn vui lòng đăng nhập lại");
       }
     } catch (err) {
       console.log("lay danh sach tu vung that bai: " + err);
@@ -94,6 +111,8 @@ export default function Hv_QlTuVung() {
 
   return (
     <section className="w-full">
+      {tb && <Alert type={typeTB} noiDung={ndTB} tat={TatThongBao} />}
+
       {/* ///////////thẻ tap */}
       <div className="w-full flex gap-2  items-center relative mb-[40px]">
         <div

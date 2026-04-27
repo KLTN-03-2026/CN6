@@ -41,6 +41,10 @@ export default function XNThanhToan() {
 
       if (res.trangThai !== "tc") {
         alert(res.mess);
+      } else if (res.trangThai === "hh") {
+        settb(true);
+        settypeTB("w"); // w , err
+        setNdTB("Phiên đăng nhập hết hạn vui lòng đăng nhập lại");
       } else {
         setData(res.data);
         setsoTien(res.data.datakh.Gia.toLocaleString("vi-VN"));

@@ -5,9 +5,21 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const path = require('path');
+const multer = require('multer');
+const fs = require('fs');
+require('dotenv').config();
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { Mistral } = require('@mistralai/mistralai')
+const Groq = require('groq-sdk');
+const OpenAI = require('openai');
+
 
 app.use(cors());
 app.use(express.json());
+const thuMucTaiNguyen = path.join(__dirname, 'taiNguyen');
+
+app.use('/taiNguyen', express.static(thuMucTaiNguyen));
 
 mongoose.connect('mongodb://localhost:27017/E-learning').then(()=>{
     console.log("kết nối mongodb thanh cong 💚");
@@ -82,6 +94,16 @@ const xacThuc = (req,res,next)=>{
     }
 }
 
+app.get('/api/xacThuc-thongTinTk',xacThuc,async(req,res)=>{
+    const {Email,VaiTro}= req.user;
+    res.status(200).json({
+        trangThai:"tc",
+        data:{
+            Email: Email,
+            VaiTro:VaiTro
+        }
+    })
+})
 
 //////////////////   BANG TÀI KHOẢN   ////////////////////////
 
@@ -946,7 +968,7 @@ app.get('/api/ten-id-lopHoc',xacThuc, async(req,res)=>{
 ////////////// CHAT BOT AI//////////
 
 require('dotenv').config();
-const Groq = require("groq-sdk");
+
 const groq = new Groq(process.env.GROQ_API_KEY);
 
 /// api tạo tin nhắn 
@@ -1019,10 +1041,7 @@ app.post('/api/tap-tn-ai',async(req,res)=>{
         });
 
         const responseText = chatCompletion.choices[0]?.message?.content || "Xin lỗi, mình bị lỡ nhịp. Bạn nói lại nhé!";
-
-        
         // Rút trích đoạn text câu trả lời từ kết quả
-       
        
         // Trả về cho Frontend React
         return res.status(200).json({
@@ -1036,6 +1055,703 @@ app.post('/api/tap-tn-ai',async(req,res)=>{
         })
     }
 })
+
+
+
+//// ai cham bai /////////
+
+
+
+const openai = new OpenAI({
+  apiKey: process.env.GROQ_API_KEY,
+  baseURL: "https://api.groq.com/openai/v1"
+});
+
+
+// Khởi tạo Gemini với API Key của bạn (Lấy miễn phí tại Google AI Studio)
+const genAI = new GoogleGenerativeAI(process.env.GEMIN_KEY_1);
+
+// Hàm phụ trợ: Biến file vật lý (mp3, webm, jpg) thành định dạng Base64 để nhét vào Gemini
+function chuyenFileChoGemini(duongDanFile, mimeType) {
+  return {
+    inlineData: {
+      data: Buffer.from(fs.readFileSync(duongDanFile)).toString("base64"),
+      mimeType: mimeType
+    },
+  };
+}
+
+    // idBaiTap:{type:String,require:true},
+    // email:{type:String,require:true},
+    // CauHoi:{type:String, require:true},/
+    // type:{type:Number,default: 0},/
+    // a:{type:String, default:""},/
+    // b:{type:String, default:""},/
+    // c:{type:String, default:""},/
+    // d:{type:String, default:""},/
+    // fileNghe:{type:String,default:""},/
+    // anh:{type:String,default:""},/
+    // dapAnDung:{type:String,default:""},/
+    // dapAnHocVien:{type:String,default:""},/
+    // giaiThich:{type:String,default:""},/
+    // loipheAI:{type:String,default:""},
+
+    // File: test-gemini.js
+
+
+app.post(`/api/chamDiemTuLuan`, async (req, res) => {
+  try {
+    const { CauHoi, dapAnHocVien, giaiThich, anh, type } = req.body;
+    // 1. Xử lý ảnh (Đã sửa triệt để lỗi ép kiểu MIME)
+    
+
+    // 2. Chuẩn bị Prompt (Đã dọn sạch lỗi chính tả, bỏ dấu phẩy và xóa phần bắt AI nghe âm thanh)
+    
+    
+
+     ///// lần 1 yêu cầu gemi chấm bài
+        try{
+            let khoangDiem = "";
+    
+                    if (Number(type) === 1) {
+                    khoangDiem = "từ 0 đến 2 (thấp nhất là 0 điểm và cao nhất là 2 điểm)";
+                    } else if (Number(type) === 2) {
+                    khoangDiem = "từ 0 đến 6 (thấp nhất là 0 điểm và cao nhất là 6 điểm)";
+                    }
+                    const duLieuGoiDi = [];
+                    const yeuCau = `
+                    Bạn là một giám khảo chấm thi tiếng Anh chuẩn TOEIC/IELTS phần Writing (Tự luận).
+                    
+                    THÔNG TIN BÀI THI:
+                    - Câu hỏi: "${CauHoi}"
+                    - Hình ảnh đính kèm: (Học viên sẽ miêu tả dựa trên hình ảnh được cung cấp nếu có).
+                    - Yêu cầu/Giải thích của giáo viên: "${giaiThich}"
+
+                    BÀI LÀM CỦA HỌC VIÊN:
+                    "${dapAnHocVien}"
+
+                    NHIỆM VỤ:
+                    Hãy đọc bài làm của học viên, phân tích độ chuẩn xác về ngữ pháp, từ vựng và sự liên quan đến câu hỏi cũng như hình ảnh của đề thi.
+                    
+                    QUAN TRỌNG: Hãy trả về kết quả ĐÚNG theo định dạng JSON sau, không bọc markdown, không kèm theo bất kỳ chữ nào khác:
+                    {
+                        "diemUocTinh": "Số điểm ${khoangDiem}",
+                        "loiNhanXet": "Lời nhận xét chi tiết bằng tiếng Việt để học viên có thể cải thiện (ngắn gọn nhất có thể, đúng trọng tâm),(LƯU Ý QUAN TRỌNG: Viết liền trên 1 dòng duy nhất, tuyệt đối KHÔNG sử dụng ký tự xuống dòng ở đây)"
+                    }
+                    `;
+                    duLieuGoiDi.push(yeuCau);
+                    if (anh !== "") {
+                    const duongDanAnhThat = path.join(__dirname, '../backend/taiNguyen', anh);
+                    const mimeTypeAnh = anh.endsWith('.png') ? 'image/png' : 'image/jpeg';
+                    const phanHinhAnh = chuyenFileChoGemini(duongDanAnhThat, mimeTypeAnh);
+                    duLieuGoiDi.push(phanHinhAnh);
+                    }
+                    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+                    console.log(`⏳ Đang nhờ gemini chấm bài tự luận...`);
+                    const ketQua = await model.generateContent(duLieuGoiDi);
+                    const phanHoiTuAI = ketQua.response.text();
+                    
+                    // Dọn dẹp markdown rác và Parse JSON
+                    const chuoiJsonSach = phanHoiTuAI.replace(/```json|```/g, "").trim(); 
+                    const ketQuaHoanChinh = JSON.parse(chuoiJsonSach);
+                    console.log("🎯 KẾT QUẢ CHẤM ĐIỂM TỰ LUẬN:", ketQuaHoanChinh);
+                    
+                    // Trả kết quả thành công và DỪNG API
+                    return res.status(200).json({
+                    trangThai: "tc",
+                    data: ketQuaHoanChinh
+                    });
+            
+            // Trả kết quả thành công và DỪNG API
+            return res.status(200).json({
+            trangThai: "tc",
+            data: ketQuaHoanChinh
+            });
+        }catch(err){
+            console.log("mode gemini cham bai that bai: "+err);
+            ///// chấm lần 2 yêu cầu nvidia
+            try{
+                console.log("⏳ Đang nhờ NVIDIA NIM (Llama 3.2 Vision) chấm bài...");
+                let khoangDiem = "";
+    
+                    if (Number(type) === 1) {
+                    khoangDiem = "từ 0 đến 2 (thấp nhất là 0 điểm và cao nhất là 2 điểm)";
+                    } else if (Number(type) === 2) {
+                    khoangDiem = "từ 0 đến 6 (thấp nhất là 0 điểm và cao nhất là 6 điểm)";
+                    }
+                    const duLieuGoiDi = [];
+                    const yeuCau = `
+                    Bạn là một giám khảo chấm thi tiếng Anh chuẩn TOEIC/IELTS phần Writing (Tự luận).
+                    
+                    THÔNG TIN BÀI THI:
+                    - Câu hỏi: "${CauHoi}"
+                    - Hình ảnh đính kèm: (Học viên sẽ miêu tả dựa trên hình ảnh được cung cấp nếu có).
+                    - Yêu cầu/Giải thích của giáo viên: "${giaiThich}"
+
+                    BÀI LÀM CỦA HỌC VIÊN:
+                    "${dapAnHocVien}"
+
+                    NHIỆM VỤ:
+                    Hãy đọc bài làm của học viên, phân tích độ chuẩn xác về ngữ pháp, từ vựng và sự liên quan đến câu hỏi cũng như hình ảnh của đề thi.
+                    
+                    QUAN TRỌNG: Hãy trả về kết quả ĐÚNG theo định dạng JSON sau, không bọc markdown, không kèm theo bất kỳ chữ nào khác:
+                    {
+                        "diemUocTinh": "Số điểm ${khoangDiem}",
+                        "loiNhanXet": "Lời nhận xét chi tiết bằng tiếng Việt để học viên có thể cải thiện (ngắn gọn nhất có thể, đúng trọng tâm),(LƯU Ý QUAN TRỌNG: Viết liền trên 1 dòng duy nhất, tuyệt đối KHÔNG sử dụng ký tự xuống dòng ở đây)"
+                    }
+                    `;
+                    duLieuGoiDi.push({ type: "text", text: yeuCau });
+                    if (anh && anh !== "") {
+                    // TRƯỜNG HỢP 1: BÀI THI CÓ ẢNH (Dùng mảng)
+                    const duongDanAnhThat = path.join(__dirname, '../backend/taiNguyen', anh);
+                    const mimeTypeAnh = anh.endsWith('.png') ? 'image/png' : 'image/jpeg';
+                    const anhBase64 = fs.readFileSync(duongDanAnhThat).toString('base64');
+                    const dataUrl = `data:${mimeTypeAnh};base64,${anhBase64}`;
+                    
+                    duLieuGoiDi = [
+                        { type: "text", text: yeuCau },
+                        { type: "image_url", image_url: { url: dataUrl } }
+                    ];
+                    } else {
+                    // TRƯỜNG HỢP 2: BÀI THI CHỈ CÓ CHỮ (Gửi chuỗi Text thuần túy)
+                    // Chặn đứng lỗi 400 của NVIDIA
+                    noiDungGuiDi = yeuCau; 
+                    }
+                    const ketQua = await openai1.chat.completions.create({
+                    model: "meta/llama-3.2-90b-vision-instruct", 
+                    messages: [{ role: "user", content: duLieuGoiDi }],
+                    temperature: 0.2, 
+                    max_tokens: 512,
+                    });
+
+                    const phanHoiTuAI = ketQua.choices[0].message.content;
+                    
+                    // Dọn dẹp JSON
+                    let chuoiJsonSach = phanHoiTuAI.replace(/```json|```/g, "").trim();
+                    chuoiJsonSach = chuoiJsonSach.replace(/[\r\n\t]+/g, " "); 
+                    const ketQuaHoanChinh = JSON.parse(chuoiJsonSach);
+                    
+                    console.log("🎯 KẾT QUẢ TỪ NVIDIA:", ketQuaHoanChinh);
+                    return res.status(200).json({
+                    trangThai: "tc",
+                    data: ketQuaHoanChinh
+                    });
+            }catch(err){
+                console.log("mode nvidia cham bai that bai: "+err);
+                try{
+                    ///// lần 3 yêu cầu MISTRAL chám bài 
+                    let khoangDiem = "";
+    
+                    if (Number(type) === 1) {
+                    khoangDiem = "từ 0 đến 2 (thấp nhất là 0 điểm và cao nhất là 2 điểm)";
+                    } else if (Number(type) === 2) {
+                    khoangDiem = "từ 0 đến 6 (thấp nhất là 0 điểm và cao nhất là 6 điểm)";
+                    }
+                    const duLieuGoiDi = [];
+                    const yeuCau = `
+                    Bạn là một giám khảo chấm thi tiếng Anh chuẩn TOEIC/IELTS phần Writing (Tự luận).
+                    
+                    THÔNG TIN BÀI THI:
+                    - Câu hỏi: "${CauHoi}"
+                    - Hình ảnh đính kèm: (Học viên sẽ miêu tả dựa trên hình ảnh được cung cấp nếu có).
+                    - Yêu cầu/Giải thích của giáo viên: "${giaiThich}"
+
+                    BÀI LÀM CỦA HỌC VIÊN:
+                    "${dapAnHocVien}"
+
+                    NHIỆM VỤ:
+                    Hãy đọc bài làm của học viên, phân tích độ chuẩn xác về ngữ pháp, từ vựng và sự liên quan đến câu hỏi cũng như hình ảnh của đề thi.
+                    
+                    QUAN TRỌNG: Hãy trả về kết quả ĐÚNG theo định dạng JSON sau, không bọc markdown, không kèm theo bất kỳ chữ nào khác:
+                    {
+                        "diemUocTinh": "Số điểm ${khoangDiem}",
+                        "loiNhanXet": "Lời nhận xét chi tiết bằng tiếng Việt để học viên có thể cải thiện (ngắn gọn nhất có thể, đúng trọng tâm),(LƯU Ý QUAN TRỌNG: Viết liền trên 1 dòng duy nhất, tuyệt đối KHÔNG sử dụng ký tự xuống dòng ở đây)"
+                    }
+                    `;
+                    duLieuGoiDi.push({ type: "text", text: yeuCau });
+                    const apiKey = process.env.MISTRAL_API_KEY;
+                    const client = new Mistral({ apiKey: apiKey });
+                    console.log("⏳ Đang nhờ MISTRAL chấm bài...");
+                    if (anh !== "") {
+                          const duongDanAnhThat = path.join(__dirname, '../backend/taiNguyen', anh);
+                          const mimeTypeAnh = anh.endsWith('.png') ? 'image/png' : 'image/jpeg';
+                          const anhBase64 = fs.readFileSync(duongDanAnhThat).toString('base64');
+                          const dataUrl = `data:${mimeTypeAnh};base64,${anhBase64}`;
+                          
+                          duLieuGoiDi.push({
+                            type: "image_url",
+                            imageUrl: dataUrl // Theo chuẩn SDK của Mistral
+                          });
+                        }
+                    const ketQua = await client.chat.complete({
+                    model: "pixtral-12b-2409", // Cỗ máy Vision cực xịn của Mistral
+                    messages: [{ role: "user", content: duLieuGoiDi }],
+                    temperature: 0.2,
+                    responseFormat: { type: "json_object" } // Bắt buộc Mistral trả về JSON 100% sạch
+                    });
+
+                    const phanHoiTuAI = ketQua.choices[0].message.content;
+                    
+                    // 4. Dọn dẹp JSON an toàn
+                    let chuoiJsonSach = phanHoiTuAI.replace(/```json|```/g, "").trim();
+                    chuoiJsonSach = chuoiJsonSach.replace(/[\r\n\t]+/g, " "); 
+                    const ketQuaHoanChinh = JSON.parse(chuoiJsonSach);
+                    
+                    console.log("🎯 KẾT QUẢ TỪ MISTRAL:", ketQuaHoanChinh);
+                    return res.status(200).json({
+                    trangThai: "tc",
+                    data: ketQuaHoanChinh
+                    });
+                }catch(err){
+                    console.log("mode MISTRAL chấm bài thất bại :" +err )
+                }
+            }
+        }
+
+  } catch (loi) {
+    console.error("❌ Lỗi khi Gemini chấm bài tự luận:", loi.message);
+    res.status(500).json({
+      trangThai: "tb", 
+      loi: "Hệ thống AI đang bận. Vui lòng thử lại sau."
+    });
+  }
+});
+
+/// PHAN XU LY LUU AM THANH
+
+const thuMucGhiAm = path.join(__dirname, 'taiNguyen/fileGhiAm_HV');
+
+app.use('/taiNguyen/fileGhiAm_HV', express.static(thuMucTaiNguyen));
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    // Nếu chưa có thư mục 'taiNguyen' thì tự động tạo
+    if (!fs.existsSync(thuMucGhiAm)) {
+      fs.mkdirSync(thuMucGhiAm, { recursive: true });
+    }
+    cb(null, thuMucGhiAm); // Lệnh cất file vào đây
+  },
+  filename: (req, file, cb) => {
+    // Lấy cái tên file gốc mà Frontend ĐÃ ÉP TÊN đính kèm vào kiện hàng
+    cb(null, file.originalname); 
+  }
+});
+
+// Tuyển nhân viên gác cổng
+const upload = multer({ storage });
+
+app.post('/api/uploadAudio', upload.single('fileGhiAm'), (req, res) => {
+  try {
+    // Nếu gác cổng báo không nhận được hàng -> Báo lỗi
+    if (!req.file) {
+      return res.status(400).json({ trangThai: "tb", loi: "Không nhận được file âm thanh từ Frontend." });
+    }
+
+    // Đọc tên file đã lưu thành công
+    const tenFile = req.file.filename;
+
+    // Tạo đường link động để Frontend ghép vào src của <audio>
+    const linkAmThanh = `taiNguyen/fileGhiAm_HV/${tenFile}`;
+
+    // Trả kết quả về cho Frontend (React)
+    res.status(200).json({
+      trangThai: "tc",
+      linkAmThanh: linkAmThanh,
+    });
+    console.log("up load file thành công");
+    console.log(linkAmThanh);
+
+  } catch (error) {
+    console.error("Lỗi Server:", error);
+    res.status(500).json({ trangThai: "tb", loi: "Lỗi hệ thống Backend" });
+  }
+});
+
+
+
+/// api cham diem speaking
+
+// chuyển âm thanh sang văn bản
+
+
+
+
+
+
+// Khởi tạo client OpenAI
+
+
+const bocBangWhisper = async (duongDanFile) => {
+  try {
+    console.log("Đang gửi file .webm cho Whisper bóc băng...");
+    const duongDanAudioThat = path.join(__dirname, '../backend/', duongDanFile); 
+    const transcription = await openai.audio.transcriptions.create({
+      file: fs.createReadStream(duongDanAudioThat),
+      model: "whisper-large-v3", // Sử dụng model Whisper V2/V3 mới nhất
+      response_format: "verbose_json", // Bắt buộc để lấy được timestamp
+      timestamp_granularities: ["word"], // Yêu cầu bóc tách thời gian từng từ một
+    });
+
+    console.log("✅ Whisper bóc băng hoàn tất!");
+    
+    return transcription;
+    
+
+  } catch (error) {
+    console.error("❌ Lỗi khi gọi Whisper API:", error.message);
+    throw error;
+  }
+};
+
+module.exports = { bocBangWhisper };
+
+/// đánh giá ngữ điều
+
+
+
+
+const wav = require('node-wav');
+const { PitchDetector } = require('pitchy');
+
+const ffmpeg = require('fluent-ffmpeg');
+const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
+ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+
+// --- 1. TRẠM CHUYỂN ĐỔI ÂM THANH (FFMPEG) ---
+const chuyenDoiWebmSangWav = (duongDanWebmGoc, duongDanWavDich) => {
+  return new Promise((resolve, reject) => {
+    ffmpeg(duongDanWebmGoc)
+      .audioChannels(1) 
+      .audioFrequency(16000) 
+      .audioCodec('pcm_s16le') // Ép chuẩn PCM 16-bit cho thư viện wav đọc
+      .on('end', () => resolve(duongDanWavDich))
+      .on('error', (err) => reject(err))
+      .save(duongDanWavDich);
+  });
+};
+
+// --- 2. HÀM TÍNH TOÁN TOÁN HỌC ---
+const tinhDoLechChuan = (mangSo) => {
+  if (mangSo.length === 0) return 0;
+  const trungBinh = mangSo.reduce((a, b) => a + b) / mangSo.length;
+  const phuongSai = mangSo.reduce((a, b) => a + Math.pow(b - trungBinh, 2), 0) / mangSo.length;
+  return Math.sqrt(phuongSai);
+};
+
+// --- 3. TRẠM ĐO LƯỜNG NGỮ ĐIỆU (PITCHY) ---
+const phanTichNguDieuBangJS = async (duongDanWav) => {
+  try {
+    console.log("Đang dùng JS thuần đo lường sóng âm...");
+    
+    // Đọc trực tiếp file WAV vừa được FFmpeg sinh ra
+    const buffer = fs.readFileSync(duongDanWav);
+    const result = wav.decode(buffer);
+    
+    const audioData = result.channelData[0]; 
+    const sampleRate = result.sampleRate;
+
+    const doDaiKhung = 2048; 
+    const detector = PitchDetector.forFloat32Array(doDaiKhung);
+    const mangCaoDo = [];
+
+    for (let i = 0; i < audioData.length - doDaiKhung; i += doDaiKhung) {
+      const khungAmThanh = audioData.slice(i, i + doDaiKhung);
+      const [pitch, clarity] = detector.findPitch(khungAmThanh, sampleRate);
+      
+      if (clarity > 0.8 && pitch > 50 && pitch < 500) {
+        mangCaoDo.push(pitch);
+      }
+    }
+
+    const doLechChuanF0 = tinhDoLechChuan(mangCaoDo);
+    
+    let nhanXet = "Chưa xác định";
+    if (doLechChuanF0 < 20) {
+      nhanXet = "Giọng đọc khá đều đều (Monotone), chưa có sự nhấn nhá trọng âm câu.";
+    } else {
+      nhanXet = "Giọng đọc có ngữ điệu tốt, trầm bổng và tự nhiên.";
+    }
+
+    console.log(`✅ Tính toán xong! Độ biến thiên cao độ (F0 SD): ${doLechChuanF0.toFixed(2)} Hz`);
+    return {
+      f0_SD: doLechChuanF0.toFixed(2),
+      nhanXetNguDieu: nhanXet
+    };
+
+  } catch (error) {
+    console.error("❌ Lỗi khi phân tích sóng âm bằng JS:", error);
+    throw error;
+  }
+};
+
+// --- 4. LUỒNG CHẠY TEST TỔNG THỂ ---
+const chayThuHeThong = async (fileWebmGoc) => {
+  try {
+    // Đảm bảo đường dẫn này đúng với cấu trúc thư mục của bạn
+    
+    const fileWavDich = fileWebmGoc.replace('.webm', '.wav'); 
+
+    console.log("⏳ BƯỚC 1: Đang ép kiểu file .webm sang .wav...");
+    await chuyenDoiWebmSangWav(fileWebmGoc, fileWavDich);
+    console.log("✅ Ép kiểu thành công!");
+
+    console.log("⏳ BƯỚC 2: Đưa file .wav chuẩn vào thư viện đo sóng âm...");
+    const ketQua = await phanTichNguDieuBangJS(fileWavDich); 
+    
+    console.log("🎯 KẾT QUẢ CUỐI CÙNG:");
+    return ketQua;
+
+  } catch (error) {
+    console.error("❌ Luồng chạy thất bại:", error);
+  }
+};
+
+// Kích hoạt chạy thử
+
+
+/// api
+
+// const genAI = [
+//     { 
+//         genAI: new GoogleGenerativeAI(process.env.GEMIN_KEY_1), 
+//         tenModel: "gemini-2.5-flash-lite" 
+//       },
+//       { 
+//         genAI: new GoogleGenerativeAI(process.env.GEMIN_KEY_2), 
+//         tenModel: "gemini-1.5-flash" 
+//       },
+//       { 
+//         genAI: new GoogleGenerativeAI(process.env.GEMIN_KEY_3), 
+//         tenModel: "gemini-pro" 
+//       }
+// ]
+
+const openai1 = new OpenAI({
+  apiKey: process.env.NVIDIA_API_KEY, // NHỚ DÁN KEY MỚI VÀO FILE .ENV NHÉ!
+  baseURL: 'https://integrate.api.nvidia.com/v1', // Trỏ đường truyền về NVIDIA thay vì ChatGPT
+});
+
+
+
+app.post(`/api/chamDiemSpeaking`, async (req, res) => {
+  const { CauHoi, dapAnHocVien, giaiThich, anh, type } = req.body;
+  
+  try {
+    const nguDieu = await chayThuHeThong(dapAnHocVien);
+    const Whisper = await bocBangWhisper(dapAnHocVien);
+
+    console.log("Whisper Text:", Whisper);
+    console.log("Ngữ điệu:", nguDieu);
+
+    const duLieuGoiDi = [];
+    
+    // 1. Chuẩn bị File Âm Thanh (Đã sửa lỗi ép kiểu luôn thành mp3)
+    if (dapAnHocVien !== "") {
+      const duongDanAudioThat = path.join(__dirname, '../backend/', dapAnHocVien); 
+      const mimeTypeAudio = dapAnHocVien.endsWith('.mp3') ? 'audio/mp3' : 'audio/webm';
+      const dapAnHocVienGhiAm = chuyenFileChoGemini(duongDanAudioThat, mimeTypeAudio);
+      duLieuGoiDi.push(dapAnHocVienGhiAm);
+    }
+    
+    // 2. Chuẩn bị File Ảnh
+    
+
+    // 3. Chuẩn bị Prompt (Đã xóa dấu phẩy thừa ở cuối JSON)
+    
+
+    
+    try{
+        ////gemi chấm bài
+        let duLieuGoiDi = [];
+        
+                
+                    const yeuCau = `
+                    Bạn là một giám khảo chấm thi tiếng Anh chuẩn TOEIC/IELTS.
+                    THÔNG TIN BÀI THI:
+                        - Câu hỏi: "${CauHoi}"
+                        - Hình ảnh đính kèm: có thể có hoặc không.
+                        - Yêu cầu/Giải thích của giáo viên: "${giaiThich}"
+
+                    DỮ LIỆU BÀI LÀM CỦA HỌC VIÊN:
+                        - Nội dung học viên đã nói: "${Whisper.text}"
+                        - Đánh giá ngữ điệu giọng nói: "${nguDieu.nhanXetNguDieu}"
+
+                    Dựa vào nội dung bóc băng và đánh giá ngữ điệu, hãy phân tích độ trôi chảy, ngữ pháp, từ vựng và sự liên quan đến đề thi.
+                    
+                    QUAN TRỌNG: Hãy trả về kết quả ĐÚNG theo định dạng JSON sau, không bọc markdown, không kèm chữ nào khác:
+                    {
+                        "diemUocTinh": "Số điểm từ 0-8",
+                        "loiNhanXet": "Lời nhận xét chi tiết bằng tiếng Việt để học viên có thể cải thiện (ngắn gọn nhất có thể, đúng trọng tâm),(LƯU Ý QUAN TRỌNG: Viết liền trên 1 dòng duy nhất, tuyệt đối KHÔNG sử dụng ký tự xuống dòng ở đây)"
+                    }
+                    `;
+                    duLieuGoiDi.push(yeuCau );
+            if (anh !== "") {
+            const duongDanAnhThat = path.join(__dirname, '../backend/taiNguyen', anh);
+            const mimeTypeAnh = anh.endsWith('.png') ? 'image/png' : 'image/jpeg';
+            const phanHinhAnh = chuyenFileChoGemini(duongDanAnhThat, mimeTypeAnh);
+            duLieuGoiDi.push(phanHinhAnh);
+            }
+            const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+            console.log(`⏳ Đang nhờ gemini chấm bài tự luận...`);
+            const ketQua = await model.generateContent(duLieuGoiDi);
+            const phanHoiTuAI = ketQua.response.text();
+            
+            // Dọn dẹp markdown rác và Parse JSON
+            const chuoiJsonSach = phanHoiTuAI.replace(/```json|```/g, "").trim(); 
+            const ketQuaHoanChinh = JSON.parse(chuoiJsonSach);
+            console.log("🎯 KẾT QUẢ CHẤM ĐIỂM TỰ LUẬN:", ketQuaHoanChinh);
+            
+            // Trả kết quả thành công và DỪNG API
+            return res.status(200).json({
+            trangThai: "tc",
+            data: ketQuaHoanChinh
+            });
+        }catch(err){
+            console.log("mode gemini cham bai that bai: "+err);
+            
+            
+            ///// chấm lần 2 yêu cầu nvidia
+            try{
+
+
+
+                let duLieuGoiDi = [];
+                
+                    const yeuCau = `
+                    Bạn là một giám khảo chấm thi tiếng Anh chuẩn TOEIC/IELTS.
+                    THÔNG TIN BÀI THI:
+                        - Câu hỏi: "${CauHoi}"
+                        - Hình ảnh đính kèm: có thể có hoặc không.
+                        - Yêu cầu/Giải thích của giáo viên: "${giaiThich}"
+
+                    DỮ LIỆU BÀI LÀM CỦA HỌC VIÊN:
+                        - Nội dung học viên đã nói: "${Whisper.text}"
+                        - Đánh giá ngữ điệu giọng nói: "${nguDieu.nhanXetNguDieu}"
+
+                    Dựa vào nội dung bóc băng và đánh giá ngữ điệu, hãy phân tích độ trôi chảy, ngữ pháp, từ vựng và sự liên quan đến đề thi.
+                    
+                    QUAN TRỌNG: Hãy trả về kết quả ĐÚNG theo định dạng JSON sau, không bọc markdown, không kèm chữ nào khác:
+                    {
+                        "diemUocTinh": "Số điểm từ 0-8",
+                        "loiNhanXet": "Lời nhận xét chi tiết bằng tiếng Việt để học viên có thể cải thiện (ngắn gọn nhất có thể, đúng trọng tâm),(LƯU Ý QUAN TRỌNG: Viết liền trên 1 dòng duy nhất, tuyệt đối KHÔNG sử dụng ký tự xuống dòng ở đây)"
+                    }
+                    `;
+                    duLieuGoiDi.push({ type: "text", text: yeuCau });
+                console.log("⏳ Đang nhờ NVIDIA NIM (Llama 3.2 Vision) chấm bài...");
+                if (anh && anh !== "") {
+                // TRƯỜNG HỢP 1: BÀI THI CÓ ẢNH (Dùng mảng)
+                const duongDanAnhThat = path.join(__dirname, '../backend/taiNguyen', anh);
+                const mimeTypeAnh = anh.endsWith('.png') ? 'image/png' : 'image/jpeg';
+                const anhBase64 = fs.readFileSync(duongDanAnhThat).toString('base64');
+                const dataUrl = `data:${mimeTypeAnh};base64,${anhBase64}`;
+                
+                duLieuGoiDi = [
+                    { type: "text", text: yeuCau },
+                    { type: "image_url", image_url: { url: dataUrl } }
+                ];
+                } else {
+                // TRƯỜNG HỢP 2: BÀI THI CHỈ CÓ CHỮ (Gửi chuỗi Text thuần túy)
+                // Chặn đứng lỗi 400 của NVIDIA
+                noiDungGuiDi = yeuCau; 
+                }
+                const ketQua = await openai1.chat.completions.create({
+                model: "meta/llama-3.2-90b-vision-instruct", 
+                messages: [{ role: "user", content: duLieuGoiDi }],
+                temperature: 0.2, 
+                max_tokens: 512,
+                });
+
+                const phanHoiTuAI = ketQua.choices[0].message.content;
+                
+                // Dọn dẹp JSON
+                let chuoiJsonSach = phanHoiTuAI.replace(/```json|```/g, "").trim();
+                chuoiJsonSach = chuoiJsonSach.replace(/[\r\n\t]+/g, " "); 
+                const ketQuaHoanChinh = JSON.parse(chuoiJsonSach);
+                
+                console.log("🎯 KẾT QUẢ TỪ NVIDIA:", ketQuaHoanChinh);
+                return res.status(200).json({
+                trangThai: "tc",
+                data: ketQuaHoanChinh
+                });
+
+
+
+            }catch(err){
+                console.log("mode nvidia cham bai that bai: "+err);
+                try{
+                    ///// lần 3 yêu cầu MISTRAL chám bài 
+                    let duLieuGoiDi = [];
+                    const yeuCau = `
+                    Bạn là một giám khảo chấm thi tiếng Anh chuẩn TOEIC/IELTS.
+                    THÔNG TIN BÀI THI:
+                        - Câu hỏi: "${CauHoi}"
+                        - Hình ảnh đính kèm: có thể có hoặc không.
+                        - Yêu cầu/Giải thích của giáo viên: "${giaiThich}"
+
+                    DỮ LIỆU BÀI LÀM CỦA HỌC VIÊN:
+                        - Nội dung học viên đã nói: "${Whisper.text}"
+                        - Đánh giá ngữ điệu giọng nói: "${nguDieu.nhanXetNguDieu}"
+
+                    Dựa vào nội dung bóc băng và đánh giá ngữ điệu, hãy phân tích độ trôi chảy, ngữ pháp, từ vựng và sự liên quan đến đề thi.
+                    
+                    QUAN TRỌNG: Hãy trả về kết quả ĐÚNG theo định dạng JSON sau, không bọc markdown, không kèm chữ nào khác:
+                    {
+                        "diemUocTinh": "Số điểm từ 0-8",
+                        "loiNhanXet": "Lời nhận xét chi tiết bằng tiếng Việt để học viên có thể cải thiện (ngắn gọn nhất có thể, đúng trọng tâm),(LƯU Ý QUAN TRỌNG: Viết liền trên 1 dòng duy nhất, tuyệt đối KHÔNG sử dụng ký tự xuống dòng ở đây)"
+                    }
+                    `;
+                    duLieuGoiDi.push({ type: "text", text: yeuCau });
+                    const apiKey = process.env.MISTRAL_API_KEY;
+                    const client = new Mistral({ apiKey: apiKey });
+                    console.log("⏳ Đang nhờ MISTRAL chấm bài...");
+                    if (anh !== "") {
+                          const duongDanAnhThat = path.join(__dirname, '../backend/taiNguyen', anh);
+                          const mimeTypeAnh = anh.endsWith('.png') ? 'image/png' : 'image/jpeg';
+                          const anhBase64 = fs.readFileSync(duongDanAnhThat).toString('base64');
+                          const dataUrl = `data:${mimeTypeAnh};base64,${anhBase64}`;
+                          
+                          duLieuGoiDi.push({
+                            type: "image_url",
+                            imageUrl: dataUrl // Theo chuẩn SDK của Mistral
+                          });
+                        }
+                    const ketQua = await client.chat.complete({
+                    model: "pixtral-12b-2409", // Cỗ máy Vision cực xịn của Mistral
+                    messages: [{ role: "user", content: duLieuGoiDi }],
+                    temperature: 0.2,
+                    responseFormat: { type: "json_object" } // Bắt buộc Mistral trả về JSON 100% sạch
+                    });
+
+                    const phanHoiTuAI = ketQua.choices[0].message.content;
+                    
+                    // 4. Dọn dẹp JSON an toàn
+                    let chuoiJsonSach = phanHoiTuAI.replace(/```json|```/g, "").trim();
+                    chuoiJsonSach = chuoiJsonSach.replace(/[\r\n\t]+/g, " "); 
+                    const ketQuaHoanChinh = JSON.parse(chuoiJsonSach);
+                    
+                    console.log("🎯 KẾT QUẢ TỪ MISTRAL:", ketQuaHoanChinh);
+                    return res.status(200).json({
+                    trangThai: "tc",
+                    data: ketQuaHoanChinh
+                    });
+                }catch(err){
+                    console.log("mode MISTRAL chấm bài thất bại :" +err )
+                }
+            }
+        }
+
+  } catch (err) {
+    // 5. CHỐT CHẶN CUỐI CÙNG: Tránh việc Frontend bị treo loading
+    console.error("❌ Lỗi toàn hệ thống chấm bài speaking: " + err);
+    res.status(500).json({
+      trangThai: "tb",
+      loi: "Hệ thống AI đang bảo trì. Vui lòng thử lại sau."
+    });
+  }
+});
+
+
+
 
 ///////////////Bang lop hoc online/////////////////////////////////////
 
@@ -1285,8 +2001,257 @@ app.delete('/api/xoaTuVung/:id',async(req,res)=>{
     }
 })
 
+/////////////// Bang bai tap ///////////////////////////////
+
+const baitapSchemal = new mongoose.Schema({
+    idLopHoc:{type:String, require:true},
+    TenBT :{type:String,require:true},
+    trangThai:{type:String,default:"banNhap"},
+    EmailNGuoiTao:{type:String, require:true},
+    ngayTao: {type:Date, default: Date.now},
+    hanNop:{type:Date,require:true}
+});
+
+const BaiTap = mongoose.model('BaiTap', baitapSchemal);
+
+// api them bai tap
+
+app.post('/api/themBT/:id',xacThuc, async(req,res)=>{
+    try{
+        const idLopHoc = req.params.id
+        const email = req.user.Email;
+        const { TenBT , hanNop} = req.body;
+
+        const newBaiTap = new BaiTap({
+            idLopHoc: idLopHoc,
+            TenBT: TenBT,
+            EmailNGuoiTao: email,
+            hanNop: hanNop
+        });
+        await newBaiTap.save();
+        console.log("them bài tập thành công  💚");
+        res.status(201).json({trangThai:"tc"})
+    }catch(err){
+        console.log("them bai tap that bai ❤️ : " +err);
+        res.status(500).json({trangThai:"tb"});
+    }
+})
+ // api lay bai tap
+
+ app.get('/api/layBaiTap/:id', async(req,res)=>{
+    try{
+        const idLopHoc = req.params.id
+        const dataBaiTap = await BaiTap.find({idLopHoc:idLopHoc});
+        if(dataBaiTap.length ===0 ){
+            console.log("danh sach bai tap lop khong ton tai ⭐")
+            return res.status(404).json({trangThai:"ktt"});
+        }
+        console.log("tra vè danh sách bài tập thành công 💚")
+        return res.status(200).json({
+            trangThai:"tc",
+            data: dataBaiTap
+        })
+
+    }catch(err){
+        console.log("lay danh sach bai tap that bai ❤️ : "+err);
+        res.status(500).json({trangThai:"tb"});
+    }
+ })
 
 
+//////////////////////////// BANG BAI TAP DA NOP///////////////////////////
+
+const BaiTapDaLamSchemal = new mongoose.Schema({
+    idBaiTap:{type:String,require:true},
+    idLopHoc:{type:String, require: true},
+    Email:{type:String,require:true},
+    ngayNop:{type:Date, default: Date.now},
+    diemUocTinh:{type:Number, default: null },
+    diemChinhThuc:{type:Number, default:null}
+});
+
+const BaiTapDaLam = mongoose.model('BaiTapDaLam', BaiTapDaLamSchemal);
+
+/// api them bai tap da lam
+
+app.post('/api/nopBaiTap/:id', xacThuc, async(req,res)=>{
+    try{
+        const idBaiTap = req.params.id;
+        const idLopHoc = await BaiTap.findById(idBaiTap).select('idLopHoc');
+
+        if(!idLopHoc) return res.status(404).json({trangThai:"ktt"})
+
+        const email = req.user.Email;
+        const {diemUocTinh,diemChinhThuc}= req.body;
+
+        const NopBai = new BaiTapDaLam({
+            idBaiTap: idBaiTap,
+            idLopHoc: idLopHoc.idLopHoc,
+            Email: email,
+            diemUocTinh: diemUocTinh,
+            diemChinhThuc:diemChinhThuc
+        });
+        await NopBai.save();
+        console.log("Nộp bài tập thành công 💚");
+        res.status(201).json({trangThai:"tc"});
+        
+    }catch(err){
+        console.log(" nộp bài tập thất bại ❤️ : "+err);
+        res.status(500).json({trangThai:"tb"});
+    }
+})
+
+// api lay bai tap da lam
+app.get('/api/layBaiTapDaLam/:id', xacThuc, async(req,res)=>{
+    try{
+        const idBaiTap = req.params.id;
+        const email = req.user.Email;
+
+        const dataNopBai = await BaiTapDaLam.findOne({idBaiTap:idBaiTap, Email:email});
+        if(!dataNopBai) return res.status(404).json({trangThai:"ktt"});
+        console.log("lay bai tap da lam thanh cong 💚")
+        return res.status(200).json({trangThai:"tc",
+            data : dataNopBai
+        })
+
+    }catch(err){
+        console.log("lay bai tap da lam that bai ❤️ : "+err);
+        res.status(500).json({trangThai:"tb"});
+    }
+})
+
+
+/////////////// bang chi tiet bai tap///////////////////////
+
+const ChiTietBaiTapSchemal = new mongoose.Schema({
+    idBaiTap:{type:String,require: true},
+    CauHoi:{type:String, require:true},
+    type:{type:Number,default: 0},
+    a:{type:String, default:""},
+    b:{type:String, default:""},
+    c:{type:String, default:""},
+    d:{type:String, default:""},
+    fileNghe:{type:String,default:""},
+    anh:{type:String,default:""},
+    dapAn:{type:String,default:""},
+    giaiThich:{type:String,default:""}
+})
+
+const ChiTietBaiTap = mongoose.model('ChiTietBaiTap',ChiTietBaiTapSchemal);
+
+/// api them chiet bai tap
+
+app.post('/api/themChiTietBaiTap/:id',async(req,res)=>{
+    try{    
+        const idBaiTap = req.params.id;
+        const {CauHoi, type, a,b,c,d,fileNghe,anh ,dapAn} = req.body;
+        
+        const newChiTietBaiTap = new ChiTietBaiTap({
+            idBaiTap:idBaiTap,
+            CauHoi:CauHoi,
+            type:type,
+            a:a,
+            b:b,
+            c:c,
+            d:d,
+            fileNghe:fileNghe,
+            anh:anh,
+            dapAn:dapAn
+        })
+        await newChiTietBaiTap.save();
+        console.log("thêm chi tiết bài tập thành công  💚");
+        res.status(201).json({trangThai:"tc"});
+
+    }catch(err){
+        console.log("them chi tiet bai tap that bai  ❤️ : "+err);
+        res.status(500).json({trangThai:"tb"});
+    }
+})
+
+// api lay danh sach chi tiết bài tâp (câu hỏi)
+
+app.get('/api/LatDanhSachChiTietBaiTap/:id',async(req,res)=>{
+    try{
+        const idBaiTap = req.params.id;
+
+        const dataDSBaiTap = await ChiTietBaiTap.find({idBaiTap:idBaiTap});
+        if(dataDSBaiTap.length===0){
+            return res.status(404).json({trangThai:"ktt"});
+        }
+        console.log("lay danh sach chi tiet bai tap thanh công 💚")
+        return res.status(200).json({
+            trangThai:"tc",
+            data: dataDSBaiTap
+        })
+
+    }catch(err){    
+        console.log("lay chi tiet bai tap that bai ❤️ : " +err);
+        res.status(500).json({trangThai:"tb"});
+    }
+})
+
+//////////// bang chi tiet bai tap da lam  /////////////////
+
+const ChiTietBaiTapDaLamSchemal = new mongoose.Schema({
+    idBaiTap:{type:String,require:true},
+    email:{type:String,require:true},
+    CauHoi:{type:String, require:true},
+    type:{type:Number,default: 0},
+    a:{type:String, default:""},
+    b:{type:String, default:""},
+    c:{type:String, default:""},
+    d:{type:String, default:""},
+    fileNghe:{type:String,default:""},
+    anh:{type:String,default:""},
+    dapAn:{type:String,default:""},
+    dapAnHocVien:{type:String,default:""},
+    giaiThich:{type:String,default:""},
+    loipheAI:{type:String,default:""},
+})
+
+const ChiTietBaiTapDaLam = mongoose.model('ChiTietBaiTapDaLam',ChiTietBaiTapDaLamSchemal);
+
+/// api thêm chi tiết bài tập đã làm
+
+app.post(`/api/theChiTietBaiTapDaLam/:id`,xacThuc, async(req,res)=>{
+    try{
+        const idBaiTap = req.params.id;
+        const email = req.user.Email;
+        // const {CauHoi, type, a,b,c,d,fileNghe,anh,dapAnDung,dapAnHocVien,giaiThich,loipheAI}= req.body;
+        const dataDapANHocVien = req.body;
+        const mangDapAnHoanChinh = dataDapANHocVien.map((item)=>{
+            return{
+                idBaiTap:idBaiTap,
+                email:email,
+                ...item,
+            }
+        });
+        await ChiTietBaiTapDaLam.insertMany(mangDapAnHoanChinh);
+        console.log("thêm chi tiêt bai tập đã làm THÀNH CÔNG 💚");
+        res.status(201).json({trangThai:"tc"});
+    }catch(err){
+        console.log("thêm chi tiết bài tập đã làm THẤT BẠI ❤️");
+        res.status(500).json({trangThai:"tb"});
+    }
+})
+
+app.get(`/api/xemtheChiTietBaiTapDaLam/:id`,xacThuc, async(req,res)=>{
+    try{
+        const idBaiTap = req.params.id;
+        const email = req.user.Email;
+
+        const data = await ChiTietBaiTapDaLam.find({idBaiTap:idBaiTap, email:email});
+        if(data.length===0) return res.status(404).json({ trangThai:"ktt"});
+
+        return res.status(200).json({trangThai:"tc",
+            data: data
+        })
+        console.log("trả về dữ liệu chi tiết bài tập thành công 💚")
+    }catch(err){
+        console.log("lay chi tiet bai tap that bai ❤️ : " +err);
+        res.status(500).json({trangThai:"tb"});
+    }
+})
 
 //////////////////////////////////////////////////////////////////
 app.listen(port,()=>{

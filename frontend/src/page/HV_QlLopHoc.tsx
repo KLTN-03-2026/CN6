@@ -37,7 +37,12 @@ export default function HV_QlLopHoc() {
     <>
       <Header type="khien" />
       <section className="m-[20px] flex relative gap-3">
-        <Sidebar data={sidebarData} Chon={Chon} ClickChon={clickChon} />
+        <Sidebar
+          Type="ql"
+          data={sidebarData}
+          Chon={Chon}
+          ClickChon={clickChon}
+        />
         {Chon === 0 && <Box_LhOnline />}
         {Chon === 1 && <Box_HV_QL_BaiTap />}
         {Chon === 2 && <Hv_QlTuVung />}

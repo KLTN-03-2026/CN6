@@ -1,6 +1,7 @@
 import { eachAxis } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
+import Alert from "./aletr";
 
 interface ThemSuaTuVungProps {
   tatThemTV: () => void;
@@ -29,6 +30,14 @@ export default function ThemSuaTuVung({
   const [DataTuVung, setDataTuVung] = useState("");
   const [TenTuVung, setTenTuVung] = useState("");
 
+  const [tb, settb] = useState(false);
+  const [ndTB, setNdTB] = useState("");
+  const [typeTB, settypeTB] = useState("w");
+
+  const TatThongBao = () => {
+    settb(false);
+  };
+
   const themTuVung = async () => {
     const TuVung = inTuVung.current?.value || "";
     const TenTV = inTenTV.current?.value || "";
@@ -55,6 +64,10 @@ export default function ThemSuaTuVung({
         if (req.trangThai === "tc") {
           layTuVung();
           tatThemTV();
+        } else if (req.trangThai === "hh") {
+          settb(true);
+          settypeTB("w"); // w , err
+          setNdTB("Phiên đăng nhập hết hạn vui lòng đăng nhập lại");
         }
       } catch (err) {
         console.log("them tư vung that bại :" + err);
@@ -121,6 +134,8 @@ export default function ThemSuaTuVung({
   });
   return (
     <div className="w-screen h-screen bg-black/50 fixed top-0 left-0 z-20 flex justify-center items-center">
+      {tb && <Alert type={typeTB} noiDung={ndTB} tat={TatThongBao} />}
+
       <img
         onClick={tatThemTV}
         className="cursor-pointer w-[50px] fixed top-[20px] right-[20px] drop-shadow-[0_0_5px_rgb(0,0,0)]"

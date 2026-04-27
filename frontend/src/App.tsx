@@ -14,6 +14,9 @@ import HocVien_QlHocTap from "./page/HocVien_QLhocTap";
 import HV_QlLopHoc from "./page/HV_QlLopHoc";
 import HocTuVung from "./page/HocTuVung";
 import Test from "./page/componan/test";
+import HV_ChiTietBaiTap from "./page/HV_ChiTietBaiTap";
+import Hv_baiTapDaLam from "./page/HV_baiTapDaLam";
+import GV_QL from "./page/GV_QL";
 
 function App() {
   return (
@@ -26,6 +29,9 @@ function App() {
       <Route path="/HocVien/QlLopHoc/:id" element={<HV_QlLopHoc />} />
       <Route path="/HocVien/HocTuVung/:id" element={<HocTuVung />} />
       <Route path="/Test" element={<Test />} />
+      <Route path="/chiTietBaiTap/:id" element={<HV_ChiTietBaiTap />} />
+      <Route path="/theChiTietBaiTapDaLam/:id" element={<Hv_baiTapDaLam />} />
+      <Route path="/GiangVien/QL" element={<GV_QL />} />
     </Routes>
   );
 }

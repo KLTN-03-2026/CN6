@@ -31,7 +31,12 @@ export default function HocVien_QlHocTap() {
     <>
       <Header type="khien" />
       <section className="m-[20px] flex relative gap-3">
-        <Sidebar data={sidebarData} Chon={Chon} ClickChon={clickChon} />
+        <Sidebar
+          Type="ql"
+          data={sidebarData}
+          Chon={Chon}
+          ClickChon={clickChon}
+        />
 
         {/* /////////////////main /////////////////////// */}
         {Chon === 0 && <BoxKhoaHoc />}

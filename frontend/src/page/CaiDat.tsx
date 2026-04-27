@@ -49,6 +49,10 @@ export default function CaiDat() {
       if (res.trangThai === "tc") {
         setdataTK(res.data);
         setchonNgheNghiep(res.data.NgheNghiep);
+      } else if (res.trangThai === "hh") {
+        settb(true);
+        settypeTB("w"); // w , err
+        setNdTB("Phiên đăng nhập hết hạn vui lòng đăng nhập lại");
       }
     } catch (err) {
       console.log("layDataTK thất bại");
@@ -158,6 +162,10 @@ export default function CaiDat() {
         setDataHD(req.data);
       } else if (req.trangThai === "ktt") {
         setAlHD(false);
+      } else if (req.trangThai === "hh") {
+        settb(true);
+        settypeTB("w"); // w , err
+        setNdTB("Phiên đăng nhập hết hạn vui lòng đăng nhập lại");
       }
     } catch (err) {
       console.log("lay data hóa đơn that bại :" + err);

@@ -1,0 +1,24 @@
+// Thiết lập thông báo
+
+const [tb, settb] = useState(false);
+  const [ndTB, setNdTB] = useState("");
+  const [typeTB, settypeTB] = useState("w");
+
+  const TatThongBao = () => {
+    settb(false);
+  };
+
+  {tb && <Alert type={typeTB} noiDung={ndTB} tat={TatThongBao} />}
+
+   else if (req.trangThai === "hh") {
+        settb(true);
+        settypeTB("w"); // w , err
+        setNdTB("Phiên đăng nhập hết hạn vui lòng đăng nhập lại");
+      }
+
+
+////// header Token
+headers: { Authorization: Token, "Content-Type": "application/json" },
+
+///////////////////
+

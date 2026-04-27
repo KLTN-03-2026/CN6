@@ -80,7 +80,7 @@ export default function KhoaHoc() {
       const res = await api.json();
       console.log(res);
       if (res.trangThai) {
-        // ChuyenTrang(`/XNThanhToan/${id}`);
+        ChuyenTrang(`/XNThanhToan/${id}`);
       } else if (!res.trangThai)
         setNdTB(
           "ban hien đang hoc 1 khoa học khác nên không thể học khóa học này",
