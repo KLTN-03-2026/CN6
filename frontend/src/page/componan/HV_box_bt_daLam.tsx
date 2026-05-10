@@ -14,7 +14,7 @@ export default function HV_box_bt_DaLam({
 }: HV_box_bt_DaLamProps) {
   return (
     <section
-      className={`overflow-y-scroll  overflow-hidden flex justify-center  w-full bg-gradient-to-t from-[#A9F9FC] to-[#2F8C8F] h-[calc(100vh-85px)] rounded-[20px] ${data?.type === 2 ? `items-start p-[50px]` : `items-center`}`}
+      className={`overflow-y-scroll  overflow-hidden flex justify-center  w-full bg-gradient-to-t from-[#A9F9FC] to-[#2F8C8F] h-[calc(100vh-85px)] rounded-[20px] items-start p-[100px]`}
     >
       {data?.type === 0 && (
         <div className="m-[10px] w-[700px] flex-col items-center gap-[10px] h-fit p-[30px] rounded-[20px] bg-white flex justify-center">
@@ -23,7 +23,7 @@ export default function HV_box_bt_DaLam({
             <div className="w-[400px] h-[300px] overflow-hidden  rounded-[10px] flex justify-center items-center">
               <img
                 className="w-full  object-contain"
-                src={`${BACKEND_URL}/taiNguyen/${data?.anh}`}
+                src={`${data?.anh}`}
                 alt=""
               />
             </div>
@@ -32,10 +32,7 @@ export default function HV_box_bt_DaLam({
           {/* file âm thanh */}
           {data?.fileNghe !== "" && (
             <audio controls>
-              <source
-                src={`${BACKEND_URL}/taiNguyen/${data?.fileNghe}`}
-                type="audio/mpeg"
-              />
+              <source src={`${data?.fileNghe}`} type="audio/mpeg" />
             </audio>
           )}
 
@@ -121,7 +118,7 @@ export default function HV_box_bt_DaLam({
             <div className="w-[400px] h-[300px] overflow-hidden  rounded-[10px] flex justify-center items-center">
               <img
                 className="w-full  object-contain"
-                src={`${BACKEND_URL}/taiNguyen/${data?.anh}`}
+                src={`${data?.anh}`}
                 alt=""
               />
             </div>
@@ -129,10 +126,7 @@ export default function HV_box_bt_DaLam({
           {/* file âm thanh */}
           {data?.fileNghe !== "" && (
             <audio controls>
-              <source
-                src={`${BACKEND_URL}/taiNguyen/${data?.fileNghe}`}
-                type="audio/mpeg"
-              />
+              <source src={`${data?.fileNghe}`} type="audio/mpeg" />
             </audio>
           )}
           <p className="w-full text-start text-[15px]">
@@ -173,7 +167,7 @@ export default function HV_box_bt_DaLam({
             <div className="w-[400px] h-[300px] overflow-hidden  rounded-[10px] flex justify-center items-center">
               <img
                 className="w-full  object-contain"
-                src={`${BACKEND_URL}/taiNguyen/${data?.anh}`}
+                src={`${data?.anh}`}
                 alt=""
               />
             </div>
@@ -181,10 +175,7 @@ export default function HV_box_bt_DaLam({
           {/* file âm thanh */}
           {data?.fileNghe !== "" && (
             <audio controls>
-              <source
-                src={`${BACKEND_URL}/taiNguyen/${data?.fileNghe}`}
-                type="audio/mpeg"
-              />
+              <source src={`${data?.fileNghe}`} type="audio/mpeg" />
             </audio>
           )}
           <p className="w-full text-start text-[15px]">
@@ -226,7 +217,7 @@ export default function HV_box_bt_DaLam({
             <div className="w-[400px] h-[300px] overflow-hidden  rounded-[10px] flex justify-center items-center">
               <img
                 className="w-full  object-contain"
-                src={`${BACKEND_URL}/taiNguyen/${data?.anh}`}
+                src={`${data?.anh}`}
                 alt=""
               />
             </div>
@@ -234,10 +225,7 @@ export default function HV_box_bt_DaLam({
           {/* file âm thanh */}
           {data?.fileNghe !== "" && (
             <audio controls>
-              <source
-                src={`${BACKEND_URL}/taiNguyen/${data?.fileNghe}`}
-                type="audio/mpeg"
-              />
+              <source src={`${data?.fileNghe}`} type="audio/mpeg" />
             </audio>
           )}
           <p className="w-full text-start text-[15px]">

@@ -4,7 +4,7 @@ import Header from "./componan/header";
 import TuVan from "./componan/tuvan";
 import { motion } from "framer-motion";
 import { data, useNavigate, useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Alert from "./componan/aletr";
 import ChatBot from "./componan/ChatBot";
 
@@ -28,6 +28,11 @@ export default function KhoaHoc() {
   const [tb, settb] = useState(false);
   const [ndTB, setNdTB] = useState("");
   const [typeTB, settypeTB] = useState("w");
+  const moneo = useRef<HTMLDivElement>(null);
+
+  const cuonXuongMoNeo = () => {
+    moneo.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const layData = async () => {
     try {
@@ -164,7 +169,12 @@ export default function KhoaHoc() {
             → Phù hợp với: {Data?.PhuHop}
           </p>
           <div className="flex justify-between">
-            <button className="p-[20px] rounded-[20px] bg-[#0D2A2E] text-white font-bold transition-all duration-300 hover:scale-[1.05]">
+            <button
+              onClick={() => {
+                cuonXuongMoNeo();
+              }}
+              className="p-[20px] rounded-[20px] bg-[#0D2A2E] text-white font-bold transition-all duration-300 hover:scale-[1.05]"
+            >
               DĂNG KÝ HỌC NGAY →
             </button>
             <p className="text-[40px] bg-gradient-to-t from-[#F34641] to-[#8D2926] bg-clip-text text-transparent font-extrabold">
@@ -256,7 +266,7 @@ export default function KhoaHoc() {
 
       {/* ///////////////////////////////////////////////////////////////////// */}
 
-      <section className="py-[50px] mx-[20px]">
+      <section ref={moneo} className="py-[50px] mx-[20px]">
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -295,14 +305,14 @@ export default function KhoaHoc() {
               hiện khóa học này không có lơp học nào sắp diễn ra :((
             </p>
           ) : (
-            <div>
+            <div className="my-[40px] flex flex-col gap-4">
               {DsLopHoc.map((item) => (
                 <div
                   key={item._id}
-                  className="my-[40px] w-full flex flex-col justify-between items-center gap-5"
+                  className=" w-full flex flex-col justify-between items-center gap-5"
                 >
                   <div className=" relative w-[790px]  p-[10px] border border-black/20 rounded-[10px] drop-shadow-[0_0_5px_rgb(0,0,0,0.15)] bg-white flex gap-5 items-center">
-                    <div className="p-[5px] h-[60px] text-[20px] font-extrabold bg-[#C3E4EC] w-fit flex justify-center items-center rounded-[5px]">
+                    <div className="p-[5px] w-[60px] h-[60px] text-[20px] font-extrabold bg-[#C3E4EC]  flex justify-center items-center rounded-[5px]">
                       {item.TenLop}
                     </div>
                     <div>

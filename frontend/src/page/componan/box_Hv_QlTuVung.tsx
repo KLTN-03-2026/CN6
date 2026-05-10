@@ -170,7 +170,7 @@ export default function Hv_QlTuVung() {
               Hiện trung tâm chưa thêm từ vựng cho khóa học này
             </p>
           )}
-          {DataTuVungTT?.map((items) => (
+          {DataTuVungTT?.toReversed().map((items) => (
             <div
               key={items._id}
               className={`p-[5px] flex gap-3 items-center relative transition-all duration-300 hover:bg-[#d7e8ec] rounded-[10px]`}

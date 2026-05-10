@@ -22,3 +22,46 @@ headers: { Authorization: Token, "Content-Type": "application/json" },
 
 ///////////////////
 
+const [Token, setToken] = useState<any>(() => {
+    const check = localStorage.getItem("E-learningTK");
+    if (check) return JSON.parse(check);
+    return null;
+  });
+
+//////////////////////
+
+if (req.trangThai === "tb") {
+        settb(true);
+        settypeTB("err"); // w , err
+        setNdTB("Thêm khóa học THẤT BẠI");
+      } else if (req.trangThai === "kdtq") {
+        settb(true);
+        settypeTB("err"); // w , err
+        setNdTB("Bạn không đủ quyền hạn để sử dụng chức năng này");
+      } else if (req.trangThai === "hh") {
+        settb(true);
+        settypeTB("err"); // w , err
+        setNdTB("Phiên đăng nhập hết hạn vui lòng đăng nhập lại");
+      } else if (req.trangThai === "tc") {
+        settb(true);
+        settypeTB("ss"); // w , err
+        setNdTB("Thêm khóa học thành công");
+      }
+
+///////////////
+
+const VaiTro = req.user.VaiTro;
+
+        if(VaiTro==="Học Viên") return res.status(200).json({trangThai:"kdtq"})
+
+///////////////////////
+
+  const [xn, setxn] = useState(false);
+  const tatxn = () => {
+    setxn(false);
+  };
+  {xn && (
+          <BoxXacNhan tat={tatxn} xoa={xoa} noiDung="Xác nhận xóa khóa học" />
+        )}
+
+        setxn(true);

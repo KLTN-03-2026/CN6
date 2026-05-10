@@ -169,7 +169,7 @@ export default function HV_box_bt({
   };
   return (
     <section
-      className={`overflow-y-scroll  overflow-hidden flex justify-center  w-full bg-gradient-to-t from-[#A9F9FC] to-[#2F8C8F] h-[calc(100vh-85px)] rounded-[20px] ${data?.type === 2 ? `items-start p-[50px]` : `items-center`}`}
+      className={`overflow-y-scroll  overflow-hidden flex justify-center  w-full bg-gradient-to-t from-[#A9F9FC] to-[#2F8C8F] h-[calc(100vh-85px)] rounded-[20px] items-start p-[100px]`}
     >
       {data?.type === 0 && (
         <div className="m-[10px] w-[700px] flex-col items-center gap-[10px] h-fit p-[30px] rounded-[20px] bg-white flex justify-center">
@@ -178,7 +178,7 @@ export default function HV_box_bt({
             <div className="w-[400px] h-[300px] overflow-hidden  rounded-[10px] flex justify-center items-center">
               <img
                 className="w-full  object-contain"
-                src={`${BACKEND_URL}/taiNguyen/${data?.anh}`}
+                src={`${data?.anh}`}
                 alt=""
               />
             </div>
@@ -187,16 +187,13 @@ export default function HV_box_bt({
           {/* file âm thanh */}
           {data?.fileNghe !== "" && (
             <audio controls>
-              <source
-                src={`${BACKEND_URL}/taiNguyen/${data?.fileNghe}`}
-                type="audio/mpeg"
-              />
+              <source src={`${data?.fileNghe}`} type="audio/mpeg" />
             </audio>
           )}
 
           {/* /// phần câu hỏi */}
           <div className="text-[15px] w-full flex flex-col gap-2 px-[10px] ">
-            <p className="">
+            <p className="whitespace-pre-line">
               câu {Chon + 1} : {data?.CauHoi}
             </p>
             <div
@@ -275,7 +272,7 @@ export default function HV_box_bt({
             <div className="w-[400px] h-[300px] overflow-hidden  rounded-[10px] flex justify-center items-center">
               <img
                 className="w-full  object-contain"
-                src={`${BACKEND_URL}/taiNguyen/${data?.anh}`}
+                src={`${data?.anh}`}
                 alt=""
               />
             </div>
@@ -283,13 +280,10 @@ export default function HV_box_bt({
           {/* file âm thanh */}
           {data?.fileNghe !== "" && (
             <audio controls>
-              <source
-                src={`${BACKEND_URL}/taiNguyen/${data?.fileNghe}`}
-                type="audio/mpeg"
-              />
+              <source src={`${data?.fileNghe}`} type="audio/mpeg" />
             </audio>
           )}
-          <p className="w-full text-start text-[15px]">
+          <p className="w-full text-start text-[15px] whitespace-pre-line">
             câu {Chon + 1} : {data?.CauHoi}
           </p>
           <textarea
@@ -316,7 +310,7 @@ export default function HV_box_bt({
             <div className="w-[400px] h-[300px] overflow-hidden  rounded-[10px] flex justify-center items-center">
               <img
                 className="w-full  object-contain"
-                src={`${BACKEND_URL}/taiNguyen/${data?.anh}`}
+                src={`${data?.anh}`}
                 alt=""
               />
             </div>
@@ -324,13 +318,10 @@ export default function HV_box_bt({
           {/* file âm thanh */}
           {data?.fileNghe !== "" && (
             <audio controls>
-              <source
-                src={`${BACKEND_URL}/taiNguyen/${data?.fileNghe}`}
-                type="audio/mpeg"
-              />
+              <source src={`${data?.fileNghe}`} type="audio/mpeg" />
             </audio>
           )}
-          <p className="w-full text-start text-[15px]">
+          <p className="w-full text-start text-[15px] whitespace-pre-line">
             {" "}
             câu {Chon + 1} : {data?.CauHoi}
           </p>
@@ -358,7 +349,7 @@ export default function HV_box_bt({
             <div className="w-[400px] h-[300px] overflow-hidden  rounded-[10px] flex justify-center items-center">
               <img
                 className="w-full  object-contain"
-                src={`${BACKEND_URL}/taiNguyen/${data?.anh}`}
+                src={`${data?.anh}`}
                 alt=""
               />
             </div>
@@ -366,13 +357,10 @@ export default function HV_box_bt({
           {/* file âm thanh */}
           {data?.fileNghe !== "" && (
             <audio controls>
-              <source
-                src={`${BACKEND_URL}/taiNguyen/${data?.fileNghe}`}
-                type="audio/mpeg"
-              />
+              <source src={`${data?.fileNghe}`} type="audio/mpeg" />
             </audio>
           )}
-          <p className="w-full text-start text-[15px]">
+          <p className="w-full text-start text-[15px] whitespace-pre-line">
             câu {Chon + 1} : {data?.CauHoi}
           </p>
           {/* ////////////////////////// */}

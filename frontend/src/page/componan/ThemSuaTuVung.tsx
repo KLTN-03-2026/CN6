@@ -2,12 +2,14 @@ import { eachAxis } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import Alert from "./aletr";
+import { BACKEND_URL } from "../FileThongso";
 
 interface ThemSuaTuVungProps {
   tatThemTV: () => void;
   type: string;
   layTuVung: () => void;
   idTuVung: string;
+  idKhoaHoc?: string;
 }
 
 export default function ThemSuaTuVung({
@@ -15,8 +17,10 @@ export default function ThemSuaTuVung({
   type,
   layTuVung,
   idTuVung,
+  idKhoaHoc,
 }: ThemSuaTuVungProps) {
-  const { id } = useParams();
+  const params = useParams();
+  const id = idKhoaHoc || params.id;
   const [Token, setToken] = useState(() => {
     const check = localStorage.getItem("E-learningTK");
     if (check) return JSON.parse(check);
@@ -55,7 +59,7 @@ export default function ThemSuaTuVung({
         TenTuVung: TenTV,
       };
       try {
-        const api = await fetch(`http://localhost:3000/api/them-TuVung/${id}`, {
+        const api = await fetch(`${BACKEND_URL}/api/them-TuVung/${id}`, {
           method: "POST",
           headers: { Authorization: Token, "Content-Type": "application/json" },
           body: JSON.stringify(data),
@@ -91,7 +95,7 @@ export default function ThemSuaTuVung({
           tuVung: inTuVung.current?.value || "",
         };
         const api = await fetch(
-          `http://localhost:3000/api/capNhatTuVung/${idTuVung}`,
+          `${BACKEND_URL}/api/capNhatTuVung/${idTuVung}`,
           {
             method: "PATCH",
             headers: {
@@ -115,7 +119,7 @@ export default function ThemSuaTuVung({
   const layChiTietTuVung = async () => {
     try {
       const api = await fetch(
-        `http://localhost:3000/api/lay-tuvung-chitiet/${idTuVung}`,
+        `${BACKEND_URL}/api/lay-tuvung-chitiet/${idTuVung}`,
       );
       const req = await api.json();
       if (req.trangThai === "tc") {

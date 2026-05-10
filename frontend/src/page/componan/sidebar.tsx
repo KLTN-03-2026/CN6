@@ -23,18 +23,20 @@ export default function Sidebar({
     <div className="sticky shrink-0 top-[80px] w-[250px] h-[calc(100vh-100px)] py-[10px]  ">
       {Type === "ql" ? (
         <div className="relative w-full h-full flex flex-col gap-2">
-          {data?.map((item, index) => (
-            <div
-              key={index}
-              onClick={() => {
-                ClickChon(index);
-              }}
-              className={`flex items-center gap-2 w-full p-[10px] transition-all duration-300 cursor-pointer rounded-[10px] text-[#114A53] font-medium border-b  border-b-black/20 ${Chon === index && "bg-[#D8F8FF] "}`}
-            >
-              <img src={item.img} alt="" className="w-[30px]" />
-              {item.text}
-            </div>
-          ))}
+          <div className="flex gap-1 flex-col">
+            {data?.map((item, index) => (
+              <div
+                key={index}
+                onClick={() => {
+                  ClickChon(index);
+                }}
+                className={`flex items-center gap-2 w-full p-[10px] transition-all duration-300 cursor-pointer rounded-[10px] text-[#114A53] font-medium border-b  border-b-black/20 ${Chon === index && "bg-[#D8F8FF] "}`}
+              >
+                <img src={item.img} alt="" className="w-[30px]" />
+                {item.text}
+              </div>
+            ))}
+          </div>
 
           <Link
             to={`/`}

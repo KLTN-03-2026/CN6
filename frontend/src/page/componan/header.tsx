@@ -87,8 +87,11 @@ export default function Header({ type, nopbai }: HeaderProps) {
   };
 
   useEffect(() => {
-    layKhoaHoc();
     checkVaiTro();
+  });
+
+  useEffect(() => {
+    layKhoaHoc();
   }, []);
 
   return (
@@ -119,14 +122,18 @@ export default function Header({ type, nopbai }: HeaderProps) {
               {drKh && (
                 <ul className="absolute top-[30px] z-[50] bg-white py-[10px] border-black/25 border rounded-[10px] flex flex-col gap-2 ">
                   {dsKH.map((item) => (
-                    <li
-                      onClick={() => {
-                        ChuyenTrang(`/khoahoc/${item._id}`);
-                      }}
-                      className="cursor-pointer  hover:bg-[#13474b]/25 transition-all py-[5px] px-[10px]"
-                    >
-                      {item.TenKhoaHoc}
-                    </li>
+                    <div>
+                      {item.trangThai === "Đang Hoạt Động" && (
+                        <li
+                          onClick={() => {
+                            ChuyenTrang(`/khoahoc/${item._id}`);
+                          }}
+                          className="cursor-pointer  hover:bg-[#13474b]/25 transition-all py-[5px] px-[20px]"
+                        >
+                          {item.TenKhoaHoc}
+                        </li>
+                      )}
+                    </div>
                   ))}
                 </ul>
               )}
@@ -167,8 +174,12 @@ export default function Header({ type, nopbai }: HeaderProps) {
                   if (Token !== null) {
                     if (VaiTro === "Học Viên") {
                       ChuyenTrang("/HocVien/QlHocTap");
-                    } else if (VaiTro === "GiangVien") {
-                      ChuyenTrang("/GiangVien/QL");
+                    } else if (VaiTro === "admin") {
+                      ChuyenTrang("/admin/QL");
+                    } else {
+                      settb(true);
+                      settypeTB("w");
+                      setNdTB("Hết phiên đăng nhập vui lòng đăng nhập lại");
                     }
                   } else setDN(true);
                 }}
@@ -197,12 +208,12 @@ export default function Header({ type, nopbai }: HeaderProps) {
             ></div>
           )}
           {avata && (
-            <div className="w-[140px] flex flex-col  py-[10px] absolute bg-white border border-black/25 rounded-[20px] right-3 top-[60px] z-50">
+            <div className="w-fit flex flex-col  py-[10px] absolute bg-white border border-black/25 rounded-[20px] right-3 top-[60px] z-50">
               <Link
                 className="px-[20px] border-b-black/25 border-b py-[5px] transition-all duration-300 hover:bg-[#114a53]/25"
                 to={`/CaiDat`}
               >
-                Cài đặt
+                Quản lý tài khoản
               </Link>
               <div
                 onClick={() => {

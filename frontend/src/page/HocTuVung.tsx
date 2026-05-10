@@ -205,7 +205,7 @@ export default function HocTuVung() {
           </div>
           <div
             onClick={() => {
-              ChuyenTrang(`/HocVien/QlLopHoc/${idlophoc}`);
+              ChuyenTrang(-1);
             }}
             className="absolute cursor-pointer top-[-60px] right-[50px] items-center gap-1 text-[#114a53] font-medium text-[18px] flex px-[10px] py-[8px] bg-[#e1eef1] rounded-[10px]"
           >

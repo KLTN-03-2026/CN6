@@ -33,7 +33,7 @@ export default function Box_HV_CongDong() {
           Hiện giáo viên chưa thêm cộng đồng cho lớp :(((
         </p>
       ) : (
-        <div>
+        <div className="flex flex-col gap-2">
           {Data?.map((item) => (
             <div
               key={item._id}

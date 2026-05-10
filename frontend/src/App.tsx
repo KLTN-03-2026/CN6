@@ -16,7 +16,13 @@ import HocTuVung from "./page/HocTuVung";
 import Test from "./page/componan/test";
 import HV_ChiTietBaiTap from "./page/HV_ChiTietBaiTap";
 import Hv_baiTapDaLam from "./page/HV_baiTapDaLam";
-import GV_QL from "./page/GV_QL";
+import Admin_QL from "./page/Admin_QL";
+import ThemChinhSuaKH from "./page/ThemChinhSuaKH";
+import Ql_ChiTietLopHoc from "./page/Ql_ChiTietLopHoc";
+import QL_ChiTietBaiTap from "./page/QL_ChiTietBaiTap";
+import QL_ChamDiemBT from "./page/QL_ChamDiemBT";
+import XemVideoBaiGiang from "./page/componan/xemVideoBaiGiang";
+import QL_chiTietLuyenDe from "./page/QL_chiTietLuyenDe";
 
 function App() {
   return (
@@ -31,7 +37,13 @@ function App() {
       <Route path="/Test" element={<Test />} />
       <Route path="/chiTietBaiTap/:id" element={<HV_ChiTietBaiTap />} />
       <Route path="/theChiTietBaiTapDaLam/:id" element={<Hv_baiTapDaLam />} />
-      <Route path="/GiangVien/QL" element={<GV_QL />} />
+      <Route path="/admin/QL" element={<Admin_QL />} />
+      <Route path="/ThemChinhSuaKH/:id" element={<ThemChinhSuaKH />} />
+      <Route path="/Ql_ChiTietLopHoc/:id" element={<Ql_ChiTietLopHoc />} />
+      <Route path="/Ql_ChiTietBaiTap/:id" element={<QL_ChiTietBaiTap />} />
+      <Route path="/QL_ChamDiemBT/:id/:email" element={<QL_ChamDiemBT />} />
+      <Route path="/XemVideoBaiGiang/:id" element={<XemVideoBaiGiang />} />
+      <Route path="/QL_chiTietLuyenDe/:id" element={<QL_chiTietLuyenDe />} />
     </Routes>
   );
 }

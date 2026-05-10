@@ -20,6 +20,8 @@ export default function BoxKhoaHoc() {
     settb(false);
   };
 
+  // được lấy từ hóa đơn
+
   const layDataKH = async () => {
     try {
       const api = await fetch("http://localhost:3000/api/ten-id-lopHoc", {
@@ -55,8 +57,8 @@ export default function BoxKhoaHoc() {
         <p className="w-full text-center">Bạn chưa đăng ký Khóa học nào :((</p>
       )}
 
-      {Data?.map((item) => (
-        <div className="border drop-shadow-[0_5px_5px_rgb(0,0,0,0.25)] relative border-black/20 p-[5px] w-[800px] flex items-center gap-2 bg-white rounded-[10px]">
+      {Data?.toReversed().map((item) => (
+        <div className="border drop-shadow-[0_5px_5px_rgb(0,0,0,0.25)] relative border-black/20 p-[5px] w-full flex items-center gap-2 bg-white rounded-[10px]">
           <div className="text-[#0D2A2E] w-[55px] h-[55px] bg-[#C3E4EC] rounded-[10px] flex justify-center items-center text-[15px] font-extrabold">
             {item.TenLop}
           </div>
@@ -71,10 +73,13 @@ export default function BoxKhoaHoc() {
           >
             VÀO HỌC →
           </button>
-          {(item.trangThai === "an" || item.trangThai === "KetThuc") && (
+          {(item.trangThai === "Ẩn" ||
+            item.trangThai === "Kết Thúc" ||
+            item.trangThai === "Đã xóa") && (
             <div className="w-full h-full absolute bg-black/50 flex items-center justify-center left-[0] rounded-[10px] font-extrabold backdrop-blur-[3px] text-white">
-              {item.trangThai === "an" && "LỚP HỌC TẠM THỜI BỊ KHÓA"}
-              {item.trangThai === "KetThuc" && "LỚP HỌC ĐÃ KẾT THÚC"}
+              {item.trangThai === "Ẩn" && "LỚP HỌC TẠM THỜI BỊ ẨN"}
+              {item.trangThai === "Đã xóa" && "LỚP ĐÃ BỊ XÓA"}
+              {item.trangThai === "Kết Thúc" && "LỚP HỌC ĐÃ KẾT THÚC"}
             </div>
           )}
         </div>

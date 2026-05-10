@@ -12,6 +12,8 @@ export default function Box_LhOnline() {
     try {
       const api = await fetch(`http://localhost:3000/api/lay-lopHocon/${id}`);
       const req = await api.json();
+
+      console.log(req.trangThai);
       if (req.trangThai === "tc") {
         setData(req.data);
         setalData(false);
@@ -35,7 +37,7 @@ export default function Box_LhOnline() {
           Hiện giáo viên chưa mở lớp bạn chờ một chút nhé
         </p>
       ) : (
-        <div>
+        <div className="flex flex-col gap-2">
           {Data?.map((item) => (
             <div
               key={item._id}

@@ -358,21 +358,25 @@ export default function Index() {
           {/* //////////////////////////// */}
 
           {DataKH?.map((item, index) => (
-            <Link
-              key={item._id}
-              to={`/khoahoc/${item._id}`}
-              className="w-[490px] h-[80px] p-[10px] backdrop-blur-sm border bg-white/15 rounded-[10px] border-white/20 flex items-center justify-between transition-all hover:scale-[1.05] duration-500 hover:bg-white/30"
-            >
-              <div className="flex flex-row items-center gap-[10px] overflow-hidden">
-                <div className="w-[50px] h-[50px] shrink-0 bg-white rounded-[50%] flex justify-center items-center overflow-hidden  text-center font-extrabold text-[25px] text-[#1A4857]">
-                  {index + 1}
-                </div>
-                <p className="font-extrabold text-[25px] truncate overflow-hidden w-full ">
-                  {item.TenKhoaHoc}
-                </p>
-              </div>
-              <p className="text-[30px]">→</p>
-            </Link>
+            <div>
+              {item.trangThai === "Đang Hoạt Động" && (
+                <Link
+                  key={item._id}
+                  to={`/khoahoc/${item._id}`}
+                  className="w-[490px] h-[80px] p-[10px] backdrop-blur-sm border bg-white/15 rounded-[10px] border-white/20 flex items-center justify-between transition-all hover:scale-[1.05] duration-500 hover:bg-white/30"
+                >
+                  <div className="flex flex-row items-center gap-[10px] overflow-hidden">
+                    <div className="w-[50px] h-[50px] shrink-0 bg-white rounded-[50%] flex justify-center items-center overflow-hidden  text-center font-extrabold text-[25px] text-[#1A4857]">
+                      {index + 1}
+                    </div>
+                    <p className="font-extrabold text-[25px] truncate overflow-hidden w-full ">
+                      {item.TenKhoaHoc}
+                    </p>
+                  </div>
+                  <p className="text-[30px]">→</p>
+                </Link>
+              )}
+            </div>
           ))}
         </div>
       </section>

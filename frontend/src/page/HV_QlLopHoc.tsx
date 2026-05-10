@@ -6,12 +6,22 @@ import Box_HV_CongDong from "./componan/box_HV_CongDong";
 import Hv_QlTuVung from "./componan/box_Hv_QlTuVung";
 import Box_HV_BaiTap from "./componan/box_HV_QL_BaiTap";
 import Box_HV_QL_BaiTap from "./componan/box_HV_QL_BaiTap";
+import HV_videoBaiGiang from "./componan/HV_videoBaiGiang";
+import HV_TongQuan from "./componan/HV_TongQuan";
 
 export default function HV_QlLopHoc() {
   const sidebarData = [
     {
+      text: "Tổng quan",
+      img: "https://img.icons8.com/?size=100&id=10576&format=png&color=114A53",
+    },
+    {
       text: "Lớp học online",
       img: "https://img.icons8.com/?size=100&id=25213&format=png&color=114A53",
+    },
+    {
+      text: "Video bài Giảng",
+      img: "https://img.icons8.com/?size=100&id=vfBptSkYnFAR&format=png&color=114A53",
     },
     {
       text: "Bài tập về nhà",
@@ -43,10 +53,12 @@ export default function HV_QlLopHoc() {
           Chon={Chon}
           ClickChon={clickChon}
         />
-        {Chon === 0 && <Box_LhOnline />}
-        {Chon === 1 && <Box_HV_QL_BaiTap />}
-        {Chon === 2 && <Hv_QlTuVung />}
-        {Chon === 3 && <Box_HV_CongDong />}
+        {Chon === 0 && <HV_TongQuan />}
+        {Chon === 1 && <Box_LhOnline />}
+        {Chon === 2 && <HV_videoBaiGiang />}
+        {Chon === 3 && <Box_HV_QL_BaiTap />}
+        {Chon === 4 && <Hv_QlTuVung />}
+        {Chon === 5 && <Box_HV_CongDong />}
       </section>
     </>
   );

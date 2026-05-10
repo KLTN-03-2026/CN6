@@ -47,7 +47,7 @@ export default function HV_ChiTietBaiTap() {
 
         const sidebar = [
           {
-            text: "part 1",
+            text: `Câu hỏi`,
             slCauHoi: Number(req.data.length),
           },
         ];

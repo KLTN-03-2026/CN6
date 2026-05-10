@@ -1,8 +1,14 @@
 import { useState } from "react";
 import Header from "./componan/header";
 import Sidebar from "./componan/sidebar";
+import GV_QL_KhoaHoc from "./componan/GV_QL_KhoaHoc";
+import QL_LopHoc from "./componan/QL_LopHoc";
+import QL_quanLyTuVung from "./componan/QL_quanLyTuVung";
+import QL_vidoBaiGiang from "./componan/QL_videoBaiGiang";
+import QL_taiKhoan from "./componan/QL_taiKhoan";
+import Ql_luyenDe from "./componan/QL_luyenDe";
 
-export default function GV_QL() {
+export default function Admin_QL() {
   const sidebarData = [
     {
       text: "QL. khóa học",
@@ -11,6 +17,14 @@ export default function GV_QL() {
     {
       text: "QL. lớp học",
       img: "https://img.icons8.com/?size=100&id=9456&format=png&color=114A53",
+    },
+    {
+      text: "QL. Video Bài Giảng",
+      img: "https://img.icons8.com/?size=100&id=vfBptSkYnFAR&format=png&color=114A53",
+    },
+    {
+      text: "QL. Từ Vựng",
+      img: "https://img.icons8.com/?size=100&id=35191&format=png&color=114A53",
     },
     {
       text: "QL. Tài Khoản",
@@ -56,6 +70,12 @@ export default function GV_QL() {
           Chon={Chon}
           ClickChon={clickChon}
         />
+        {Chon === 0 && <GV_QL_KhoaHoc />}
+        {Chon === 1 && <QL_LopHoc />}
+        {Chon === 2 && <QL_vidoBaiGiang />}
+        {Chon === 3 && <QL_quanLyTuVung />}
+        {Chon === 4 && <QL_taiKhoan />}
+        {Chon === 5 && <Ql_luyenDe />}
       </section>
     </>
   );
