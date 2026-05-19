@@ -63,6 +63,11 @@ export default function TT_LopHoc() {
         settypeTB("err");
         setNdTB("Bạn không đủ quyền hạn để xóa lớp học");
         setShowXacNhan(false);
+      } else if (req.trangThai === "dangHoatDong") {
+        settb(true);
+        settypeTB("err");
+        setNdTB("Lớp học đang Khai Giảng hoặc Đang Hoạt Động, không thể xóa!");
+        setShowXacNhan(false);
       } else {
         settb(true);
         settypeTB("err");

@@ -112,6 +112,7 @@ export default function HV_ChiTietBaiTap() {
             giaiThich: dapanCoPy[i].giaiThich,
             anh: dapanCoPy[i].anh,
             type: dapanCoPy[i].type,
+            loaiBai: "Bài tập về nhà",
           };
           const api = await fetch(`${BACKEND_URL}/api/chamDiemTuLuan`, {
             method: "POST",
@@ -170,6 +171,7 @@ export default function HV_ChiTietBaiTap() {
                   giaiThich: dapanCoPy[i].giaiThich,
                   anh: dapanCoPy[i].anh,
                   type: dapanCoPy[i].type,
+                  loaiBai: "Bài tập về nhà",
                 };
                 console.log(0);
                 const api1 = await fetch(

@@ -16,7 +16,8 @@ const OpenAI = require('openai');
 
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 const thuMucTaiNguyen = path.join(__dirname, 'taiNguyen');
 
 app.use('/taiNguyen', express.static(thuMucTaiNguyen));
@@ -27,6 +28,32 @@ mongoose.connect('mongodb://localhost:27017/E-learning').then(() => {
     console.log("kết nối mongodb thất bại ❤️ " + err);
 })
 
+const xacThuc = (req, res, next) => {
+
+    const token = req.header('Authorization');
+
+    if (!token) return res.status(400).json({
+        trangThai: "hh",
+        mess: "phien dang nhap het han vui long dang nhap lai"
+    })
+
+    try {
+        const GiaiMa = jwt.verify(token, "ToanDepTrai");
+
+        req.user = GiaiMa;
+
+        next();
+
+    }
+    catch (err) {
+        res.status(500).json({
+            trangThai: "hh",
+            mess: "phien dang nhap het han vui long dang nhap lai"
+        })
+        console.log("xác thực thất bại : " + err)
+    }
+}
+
 //////////////// API TƯ VẤN /////////////////////////////////
 
 const TuVanSchema = new mongoose.Schema({
@@ -36,8 +63,8 @@ const TuVanSchema = new mongoose.Schema({
     Email: { type: String, require: true },
     NgheNghiep: { type: String },
     QuanTam: { type: String, require: true },
-    NoiDung: { type: String, require: true }
-
+    NoiDung: { type: String, require: true },
+    trangThai: { type: String, default: "Chưa tư vấn" }
 });
 
 const TuVan = mongoose.model('TuVan', TuVanSchema);
@@ -66,33 +93,28 @@ app.post('/tuvan', async (req, res) => {
     }
 });
 
+app.get('/api/tuvan', xacThuc, async (req, res) => {
+    try {
+        const data = await TuVan.find();
+        res.status(200).json({ trangThai: "tc", data });
+    } catch (err) {
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+app.patch('/api/tuvan/:id', xacThuc, async (req, res) => {
+    try {
+        const { trangThai } = req.body;
+        await TuVan.findByIdAndUpdate(req.params.id, { trangThai });
+        res.status(200).json({ trangThai: "tc" });
+    } catch (err) {
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
 ////////////////////xác thực ///////////////////////
 
-const xacThuc = (req, res, next) => {
 
-    const token = req.header('Authorization');
-
-    if (!token) return res.status(400).json({
-        trangThai: "hh",
-        mess: "phien dang nhap het han vui long dang nhap lai"
-    })
-
-    try {
-        const GiaiMa = jwt.verify(token, "ToanDepTrai");
-
-        req.user = GiaiMa;
-
-        next();
-
-    }
-    catch (err) {
-        res.status(500).json({
-            trangThai: "hh",
-            mess: "phien dang nhap het han vui long dang nhap lai"
-        })
-        console.log("xác thực thất bại : " + err)
-    }
-}
 
 app.get('/api/xacThuc-thongTinTk', xacThuc, async (req, res) => {
     const { Email, VaiTro } = req.user;
@@ -114,10 +136,50 @@ const TaiKhoanSchema = new mongoose.Schema({
     NamSinh: { type: Number },
     Email: { type: String, require: true, unique: true },
     VaiTro: { type: String, default: "Học Viên" },
-    NgheNghiep: { type: String }
+    NgheNghiep: { type: String },
+    ngayTao: { type: Date, default: Date.now }
 });
 
 const TaiKhoan = mongoose.model('TaiKhoan', TaiKhoanSchema);
+
+////////////////   BANG KiemTraDauVaoDaLam   ////////////////////////
+
+const KiemTraDauVaoDaLamSchema = new mongoose.Schema({
+    email: { type: String, require: true },
+    hoten: { type: String, require: true },
+    sdt: { type: String, require: true },
+    diemLR: { type: Number },
+    diemSW: { type: Number },
+    motanangluc: { type: String },
+    ngayTao: { type: Date, default: Date.now }
+});
+
+const KiemTraDauVaoDaLam = mongoose.model('KiemTraDauVaoDaLam', KiemTraDauVaoDaLamSchema);
+
+app.post('/api/luu-kiem-tra-dau-vao', xacThuc, async (req, res) => {
+    try {
+        const { diemLR, diemSW, motanangluc } = req.body;
+        const Email = req.user.Email;
+
+        const tk = await TaiKhoan.findOne({ Email: Email });
+        if (!tk) return res.status(404).json({ trangThai: "tb", mess: "Không tìm thấy tài khoản" });
+
+        const moi = new KiemTraDauVaoDaLam({
+            email: tk.Email,
+            hoten: tk.HoTen,
+            sdt: tk.sdt,
+            diemLR,
+            diemSW,
+            motanangluc
+        });
+        
+        await moi.save();
+        res.status(200).json({ trangThai: "tc" });
+    } catch (err) {
+        console.log("Loi luu kiem tra dau vao: ", err);
+        res.status(500).json({ trangThai: "tb", mess: "Lỗi server" });
+    }
+});
 
 ///////////kt số điện thoại
 app.post('/dangnhap/email', async (req, res) => {
@@ -332,127 +394,28 @@ app.post("/dangnhap/xac-nhan-otp", (req, res) => {
 });
 
 
-///api gui hoa don
-app.post("/api/gui-hoaDon-email", async (req, res) => {
-
-    const { email, HoTen, sdt, NamSinh, NgheNghiep, TenKhoaHoc, Gia, TenLop, Time } = req.body;
-    const mailOptions = {
-        from: '"E-Learning Center" <your-email@gmail.com>',
-        to: email,
-        subject: 'HÓA ĐƠN GIÁ TRỊ GIA TĂNG',
-        html: `
-            <div style="font-family: Arial, sans-serif; padding: 20px; border: 5px solid rgba(17,74,83,0.5); width: 1000px; position: relative;">
-            <!-- Header -->
-            <div style="border-bottom: 1px solid rgba(0,0,0,0.5); padding-bottom: 20px;">
-                <h1 style="text-align: center; font-weight: bold;">
-                HÓA ĐƠN GIÁ TRỊ GIA TĂNG
-                </h1>
-                <p style="text-align: center;">
-                (Bản thể hiện của hóa đơn điện tử từ máy tính tiền)
-                </p>
-                <p style="text-align: center;">Thời gian: ${Time}</p>
-            </div>
-
-            <!-- Thông tin đơn vị -->
-            <p style="margin-top: 20px;">
-                Đơn vị bán: <b>TRUNG TÂM ANH NGỮ E-LEARNING</b>
-            </p>
-
-            <div style="display: flex;">
-                <p style="width: 50%; ">
-                Số tài khoản: <b>0334604948</b>
-                </p>
-                <p style="width: 50%; ">
-                Mở tại: <b>MB Bank Điện Biên Phủ</b>
-                </p>
-            </div>
-
-            <p style="">
-                Địa chỉ: <b>Số 10 - Dũng Sĩ Thanh Khê / Đà Nẵng</b>
-            </p>
-
-            <p style=" border-bottom: 1px solid rgba(0,0,0,0.5); padding-bottom: 20px;">
-                Số điện thoại: <b>0334604948</b>
-            </p>
-
-            <!-- Thông tin khách -->
-            <p style="margin-top: 20px;">
-                Họ tên người mua: <b>${HoTen}</b>
-            </p>
-
-            <div style="display: flex;">
-                <p style="width: 50%; ">
-                Email: <b>${email}</b>
-                </p>
-                <p style="width: 50%; ">
-                SĐT: <b>${sdt}</b>
-                </p>
-            </div>
-
-            <div style="display: flex;">
-                <p style="width: 50%; ">
-                Năm sinh: <b>${NamSinh}</b>
-                </p>
-                <p style="width: 50%; ">
-                Nghề nghiệp: <b>${NgheNghiep}</b>
-                </p>
-            </div>
-
-            <p style="margin-top: 10px;">
-                Hình thức thanh toán: <b>Chuyển khoản</b>
-            </p>
-
-            <!-- Bảng -->
-            <table style="width: 100%; border-collapse: collapse; margin-top: 20px; text-align: center;">
-            <thead>
-                <tr style="font-weight: bold;">
-                <th style="border: 1px solid black; padding: 5px; width: 10%;">STT</th>
-                <th style="border: 1px solid black; padding: 5px; width: 30%;">Tên Hàng Hóa & dịch Vụ</th>
-                <th style="border: 1px solid black; padding: 5px; width: 15%;">Đơn Vị Tính</th>
-                <th style="border: 1px solid black; padding: 5px; width: 10%;">Số Lượng</th>
-                <th style="border: 1px solid black; padding: 5px; width: 20%;">Đơn Giá</th>
-                <th style="border: 1px solid black; padding: 5px; width: 15%;">Thành Tiền</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                <td style="border: 1px solid black; padding: 5px;">1</td>
-                <td style="border: 1px solid black; padding: 5px;">${TenKhoaHoc} / ${TenLop}</td>
-                <td style="border: 1px solid black; padding: 5px;">Khóa Học</td>
-                <td style="border: 1px solid black; padding: 5px;">1</td>
-                <td style="border: 1px solid black; padding: 5px;">${Gia}</td>
-                <td style="border: 1px solid black; padding: 5px;">${Gia}</td>
-                </tr>
-                <tr>
-                <td colspan="5" style="border: 1px solid black; padding: 5px; text-align: left; font-weight: bold;">
-                    Tổng Hóa Đơn:
-                </td>
-                <td style="border: 1px solid black; padding: 5px; font-weight: bold;">
-                    ${Gia} VNĐ
-                </td>
-                </tr>
-            </tbody>
-            </table>
-
-            <div style="height: 130px; width: 100%; margin-top: 20px; display: flex; font-weight: bold; ">
-            <div style="flex: 1; text-align: center; width: 100%;">Người Mua Hàng</div>
-            <div style="flex: 1; text-align: center; width: 100%;">Người Bán Hàng</div>
-            <div style="flex: 1; text-align: center; width: 100%;">Cơ Quan Thuế</div>
-            </div>
-
-            </div>
-        `
-    };
-
+// API đặt lại mật khẩu bằng email
+app.post("/dangnhap/dat-lai-mat-khau", async (req, res) => {
     try {
-        await transporter.sendMail(mailOptions);
-        res.json({ trangThai: "tc" });
-        console.log("gui email hoa don thanh cong");
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ trangThai: "tb" + err });
+        const { email, newPassword } = req.body;
+        const tk = await TaiKhoan.findOne({ Email: email });
+        if (!tk) return res.status(404).json({ trangThai: "ktt", message: "Email không tồn tại" });
+
+        const giavi = await bcrypt.genSalt(10);
+        const mkbam = await bcrypt.hash(newPassword, giavi);
+        tk.mk = mkbam;
+        await tk.save();
+
+        console.log(`Đặt lại mật khẩu thành công cho ${email}`);
+        res.status(200).json({ trangThai: "tc" });
+    } catch (err) {
+        console.error("Đặt lại mật khẩu thất bại:", err);
+        res.status(500).json({ trangThai: "tb" });
     }
 });
+
+
+////////////////// BANG HOA DON /////////////////////
 
 
 
@@ -465,6 +428,7 @@ app.post("/api/gui-hoaDon-email", async (req, res) => {
 
 const KhoaHocSchema = new mongoose.Schema({
     TenKhoaHoc: { type: String, require: true },
+    kyNang: { type: String, require: true },
     DauRa: { type: String, require: true },
     MoTa: { type: String, require: true },
     PhuHop: { type: String, require: true },
@@ -473,8 +437,8 @@ const KhoaHocSchema = new mongoose.Schema({
     QuyenLoi: { type: String, require: true },
     PhuongPhap: { type: String, require: true },
     KetQua: { type: String, require: true },
-    trangThai: { type: String, default: "Đang Hoạt Động" }
-
+    trangThai: { type: String, default: "Đang Hoạt Động" },
+    ngayTao: { type: Date, default: Date.now },
 })
 
 const KhoaHoc = mongoose.model('KhoaHoc', KhoaHocSchema);
@@ -488,10 +452,11 @@ app.post('/ThemKhoaHoc', xacThuc, async (req, res) => {
 
         if (VaiTro === "Học Viên") return res.status(200).json({ trangThai: "kdtq" })
 
-        const { TenKhoaHoc, DauRa, MoTa, PhuHop, Gia, Image, QuyenLoi, PhuongPhap, KetQua, trangThai } = req.body;
+        const { TenKhoaHoc, kyNang, DauRa, MoTa, PhuHop, Gia, Image, QuyenLoi, PhuongPhap, KetQua, trangThai } = req.body;
 
         const Data = new KhoaHoc({
             TenKhoaHoc: TenKhoaHoc,
+            kyNang: kyNang,
             DauRa: DauRa,
             MoTa: MoTa,
             PhuHop: PhuHop,
@@ -527,8 +492,9 @@ app.patch('/capNhatKhoaHoc/:id', xacThuc, async (req, res) => {
         const dataKhoaHoc = await KhoaHoc.findById(idKhoaHoc);
         if (!dataKhoaHoc) return res.status(404).json({ trangThai: "ktt" });
         if (VaiTro === "Học Viên") return res.status(200).json({ trangThai: "kdtq" })
-        const { TenKhoaHoc, DauRa, MoTa, PhuHop, Gia, Image, QuyenLoi, PhuongPhap, KetQua, trangThai } = req.body;
+        const { TenKhoaHoc, kyNang, DauRa, MoTa, PhuHop, Gia, Image, QuyenLoi, PhuongPhap, KetQua, trangThai } = req.body;
         dataKhoaHoc.TenKhoaHoc = TenKhoaHoc;
+        dataKhoaHoc.kyNang = kyNang;
         dataKhoaHoc.DauRa = DauRa;
         dataKhoaHoc.MoTa = MoTa;
         dataKhoaHoc.PhuHop = PhuHop;
@@ -570,6 +536,25 @@ app.get('/khoaHoc', async (req, res) => {
     }
 })
 
+// HÀM HỖ TRỢ XÓA FILE GHI ÂM CỦA HỌC VIÊN Ở SERVER BACKEND
+const xoaFileGhiAm = (dapAnHocVien) => {
+    if (dapAnHocVien && typeof dapAnHocVien === 'string' && dapAnHocVien.includes('taiNguyen/fileGhiAm_HV/')) {
+        const parts = dapAnHocVien.split('taiNguyen/fileGhiAm_HV/');
+        const fileName = parts[parts.length - 1];
+        if (fileName) {
+            const filePath = path.join(__dirname, 'taiNguyen/fileGhiAm_HV', fileName);
+            if (fs.existsSync(filePath)) {
+                try {
+                    fs.unlinkSync(filePath);
+                    console.log(`Đã xóa file ghi âm học viên: ${filePath}`);
+                } catch (e) {
+                    console.log(`Lỗi khi xóa file ghi âm ${filePath}:`, e);
+                }
+            }
+        }
+    }
+};
+
 // api xóa khóa Học
 
 app.delete(`/xoaKhoaHoc/:id`, xacThuc, async (req, res) => {
@@ -580,15 +565,58 @@ app.delete(`/xoaKhoaHoc/:id`, xacThuc, async (req, res) => {
         if (!dataKhoaHoc) return res.status(404).json({ trangThai: "ktt" });
         if (VaiTro !== "admin") return res.status(200).json({ trangThai: "kdtq" });/// không đủ thẩm quyền
 
-        const datalop = await LopHoc.find({
-            idKhoaHoc: idKhoaHoc, $or: [
-                { trangThai: "khaiGiang" },
-                { trangThai: "dangHoatDong" }
-            ]
-        });
-        if (datalop.length !== 0) return res.status(200).json({ trangThai: "dangCoLop" });
+        const dsLopHoc = await LopHoc.find({ idKhoaHoc: idKhoaHoc });
+        const coLopHoatDong = dsLopHoc.some(lh => 
+            lh.trangThai === "Khai Giảng" || lh.trangThai === "Đang Hoạt Động"
+        );
 
-        const xoa = await KhoaHoc.findByIdAndDelete(idKhoaHoc);
+        if (coLopHoatDong) {
+            dataKhoaHoc.trangThai = "Đang Ẩn";
+            await dataKhoaHoc.save();
+            return res.status(200).json({ trangThai: "dangCoLop" });
+        }
+
+        const idLopHocs = dsLopHoc.map(lh => String(lh._id));
+
+        // Tìm tất cả bài tập thuộc các lớp này để xóa chi tiết bài tập và file ghi âm học viên
+        const dsBaiTap = await BaiTap.find({ idLopHoc: { $in: idLopHocs } });
+        const idBaiTaps = dsBaiTap.map(bt => String(bt._id));
+
+        // Xóa file ghi âm của học viên từ ChiTietBaiTapDaLam
+        if (typeof ChiTietBaiTapDaLam !== "undefined") {
+            const dsChiTietDaLam = await ChiTietBaiTapDaLam.find({ idBaiTap: { $in: idBaiTaps } });
+            for (const item of dsChiTietDaLam) {
+                if (item.type === 3 && item.dapAnHocVien) {
+                    xoaFileGhiAm(item.dapAnHocVien);
+                }
+            }
+        }
+
+        // Thực hiện xóa toàn bộ dữ liệu của từng lớp trong khóa học
+        if (typeof lopHocOnline !== "undefined") await lopHocOnline.deleteMany({ idLopHoc: { $in: idLopHocs } });
+        if (typeof CongDong !== "undefined") await CongDong.deleteMany({ idLopHoc: { $in: idLopHocs } });
+        if (typeof DiemDanh !== "undefined") await DiemDanh.deleteMany({ idLopHoc: { $in: idLopHocs } });
+        if (typeof ChiTietDiemDanh !== "undefined") await ChiTietDiemDanh.deleteMany({ idLopHoc: { $in: idLopHocs } });
+
+        // Chỉ xóa từ vựng của Học Viên đã thêm trong các lớp thuộc khóa học này
+        if (typeof TuVung !== "undefined") {
+            await TuVung.deleteMany({ 
+                idLopHoc: { $in: idLopHocs }, 
+                VaiTroNguoiThem: "Học Viên" 
+            });
+        }
+
+        // Xóa các bảng liên quan đến bài tập
+        if (typeof BaiTap !== "undefined") await BaiTap.deleteMany({ idLopHoc: { $in: idLopHocs } });
+        if (typeof BaiTapDaLam !== "undefined") await BaiTapDaLam.deleteMany({ idLopHoc: { $in: idLopHocs } });
+        if (typeof ChiTietBaiTap !== "undefined") await ChiTietBaiTap.deleteMany({ idBaiTap: { $in: idBaiTaps } });
+        if (typeof ChiTietBaiTapDaLam !== "undefined") await ChiTietBaiTapDaLam.deleteMany({ idBaiTap: { $in: idBaiTaps } });
+
+        // Xóa toàn bộ lớp học của khóa học
+        await LopHoc.deleteMany({ idKhoaHoc: idKhoaHoc });
+
+        // Xóa khóa học
+        await KhoaHoc.findByIdAndDelete(idKhoaHoc);
         res.status(200).json({ trangThai: 'tc' });
     } catch (err) {
         console.log("xóa khóa học thất bại :" + err);
@@ -630,7 +658,8 @@ const LopHocSchema = new mongoose.Schema({
     LichHoc: { type: String, require: true },
     GioHoc: { type: String, require: true },
     TenLop: { type: String, require: true },
-    SoLuong: { type: Number, default: 0 }
+    SoLuong: { type: Number, default: 0 },
+    ngayTao: { type: Date, default: Date.now },
 });
 
 const LopHoc = mongoose.model('LopHoc', LopHocSchema);
@@ -815,6 +844,29 @@ app.delete('/api/xoa-lop-hoc-toan-dien/:id', xacThuc, async (req, res) => {
         // Kiểm tra quyền admin
         if (VaiTro !== "admin") return res.status(403).json({ trangThai: "kdtq" });
 
+        // Lấy thông tin lớp học
+        const dataLopHoc = await LopHoc.findById(idLopHoc);
+        if (!dataLopHoc) return res.status(404).json({ trangThai: "ktt" });
+
+        // Nếu lớp học đang trong trạng thái Khai Giảng hoặc Đang Hoạt Động thì không thể xóa
+        if (dataLopHoc.trangThai === "Khai Giảng" || dataLopHoc.trangThai === "Đang Hoạt Động") {
+            return res.status(200).json({ trangThai: "dangHoatDong" });
+        }
+
+        // Tách lấy danh sách bài tập của lớp học này để xóa chi tiết bài tập và file ghi âm
+        const dsBaiTap = await BaiTap.find({ idLopHoc: idLopHoc });
+        const idBaiTaps = dsBaiTap.map(bt => String(bt._id));
+
+        // Xóa file ghi âm của học viên từ ChiTietBaiTapDaLam
+        if (typeof ChiTietBaiTapDaLam !== "undefined") {
+            const dsChiTietDaLam = await ChiTietBaiTapDaLam.find({ idBaiTap: { $in: idBaiTaps } });
+            for (const item of dsChiTietDaLam) {
+                if (item.type === 3 && item.dapAnHocVien) {
+                    xoaFileGhiAm(item.dapAnHocVien);
+                }
+            }
+        }
+
         // Xóa Lớp học
         await LopHoc.findByIdAndDelete(idLopHoc);
 
@@ -824,22 +876,19 @@ app.delete('/api/xoa-lop-hoc-toan-dien/:id', xacThuc, async (req, res) => {
         // Xóa Cộng đồng
         if (typeof CongDong !== "undefined") await CongDong.deleteMany({ idLopHoc: idLopHoc });
 
-        // Xóa Bài tập
+        // Xóa từ vựng của Học Viên đã thêm trong lớp học cần xóa (giữ lại giảng viên/admin)
+        if (typeof TuVung !== "undefined") {
+            await TuVung.deleteMany({ idLopHoc: idLopHoc, VaiTroNguoiThem: "Học Viên" });
+        }
+
+        // Xóa Bài tập và kết quả bài tập liên quan
         if (typeof BaiTap !== "undefined") await BaiTap.deleteMany({ idLopHoc: idLopHoc });
-
-        // Xóa Bài tập đã làm
         if (typeof BaiTapDaLam !== "undefined") await BaiTapDaLam.deleteMany({ idLopHoc: idLopHoc });
+        if (typeof ChiTietBaiTap !== "undefined") await ChiTietBaiTap.deleteMany({ idBaiTap: { $in: idBaiTaps } });
+        if (typeof ChiTietBaiTapDaLam !== "undefined") await ChiTietBaiTapDaLam.deleteMany({ idBaiTap: { $in: idBaiTaps } });
 
-        // Xóa Chi tiết bài tập
-        if (typeof ChiTietBaiTap !== "undefined") await ChiTietBaiTap.deleteMany({ idLopHoc: idLopHoc });
-
-        // Xóa Chi tiết bài tập đã làm
-        if (typeof ChiTietBaiTapDaLam !== "undefined") await ChiTietBaiTapDaLam.deleteMany({ idLopHoc: idLopHoc });
-
-        // Xóa Điểm danh
+        // Xóa Điểm danh và Chi tiết điểm danh
         if (typeof DiemDanh !== "undefined") await DiemDanh.deleteMany({ idLopHoc: idLopHoc });
-
-        // Xóa Chi tiết điểm danh
         if (typeof ChiTietDiemDanh !== "undefined") await ChiTietDiemDanh.deleteMany({ idLopHoc: idLopHoc });
 
         res.status(200).json({ trangThai: "tc" });
@@ -982,18 +1031,226 @@ app.get('/KTdonHang/:id', async (req, res) => {
 
 ///api thêm hóa đơn
 
+
+
+
+
 const HoaDonSchema = new mongoose.Schema({
     maHoaDon: { type: String, require: true },
     idKhoaHoc: { type: String, require: true },
     idLopHoc: { type: String, require: true },
-    email: { type: String, require: true },
-    TenKhoaHoc: { type: String, require: true },
-    TenLop: { type: String, require: true },
-    Gia: { type: Number, require: true },
-    Time: { type: String, require: true }
-})
+    Email: { type: String },
+    TenKhoaHoc: { type: String },
+    Gia: { type: String },
+    TenLop: { type: String },
+    Time: { type: String, default: () => new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }) },
+    trangThai: { type: String, default: "Hoạt động" }
+});
 
-const HoaDon = mongoose.model("HoaDon", HoaDonSchema);
+const HoaDon = mongoose.model('HoaDon', HoaDonSchema);
+
+///api gui hoa don email
+app.post("/api/gui-hoaDon-email", async (req, res) => {
+
+    const { email, HoTen, sdt, NamSinh, NgheNghiep, TenKhoaHoc, Gia, TenLop, Time } = req.body;
+    const mailOptions = {
+        from: '"E-Learning Center" <your-email@gmail.com>',
+        to: email,
+        subject: 'HÓA ĐƠN GIÁ TRỊ GIA TĂNG',
+        html: `
+            <div style="font-family: Arial, sans-serif; padding: 20px; border: 5px solid rgba(17,74,83,0.5); width: 1000px; position: relative;">
+            <!-- Header -->
+            <div style="border-bottom: 1px solid rgba(0,0,0,0.5); padding-bottom: 20px;">
+                <h1 style="text-align: center; font-weight: bold;">
+                HÓA ĐƠN GIÁ TRỊ GIA TĂNG
+                </h1>
+                <p style="text-align: center;">
+                (Bản thể hiện của hóa đơn điện tử từ máy tính tiền)
+                </p>
+                <p style="text-align: center;">Thời gian: ${Time}</p>
+            </div>
+
+            <!-- Thông tin đơn vị -->
+            <p style="margin-top: 20px;">
+                Đơn vị bán: <b>TRUNG TÂM ANH NGỮ E-LEARNING</b>
+            </p>
+
+            <div style="display: flex;">
+                <p style="width: 50%; ">
+                Số tài khoản: <b>0334604948</b>
+                </p>
+                <p style="width: 50%; ">
+                Mở tại: <b>MB Bank Điện Biên Phủ</b>
+                </p>
+            </div>
+
+            <p style="">
+                Địa chỉ: <b>Số 10 - Dũng Sĩ Thanh Khê / Đà Nẵng</b>
+            </p>
+
+            <p style=" border-bottom: 1px solid rgba(0,0,0,0.5); padding-bottom: 20px;">
+                Số điện thoại: <b>0334604948</b>
+            </p>
+
+            <!-- Thông tin khách -->
+            <p style="margin-top: 20px;">
+                Họ tên người mua: <b>${HoTen}</b>
+            </p>
+
+            <div style="display: flex;">
+                <p style="width: 50%; ">
+                Email: <b>${email}</b>
+                </p>
+                <p style="width: 50%; ">
+                SĐT: <b>${sdt}</b>
+                </p>
+            </div>
+
+            <div style="display: flex;">
+                <p style="width: 50%; ">
+                Năm sinh: <b>${NamSinh}</b>
+                </p>
+                <p style="width: 50%; ">
+                Nghề nghiệp: <b>${NgheNghiep}</b>
+                </p>
+            </div>
+
+            <p style="margin-top: 10px;">
+                Hình thức thanh toán: <b>Chuyển khoản</b>
+            </p>
+
+            <!-- Bảng -->
+            <table style="width: 100%; border-collapse: collapse; margin-top: 20px; text-align: center;">
+            <thead>
+                <tr style="font-weight: bold;">
+                <th style="border: 1px solid black; padding: 5px; width: 10%;">STT</th>
+                <th style="border: 1px solid black; padding: 5px; width: 30%;">Tên Hàng Hóa & dịch Vụ</th>
+                <th style="border: 1px solid black; padding: 5px; width: 15%;">Đơn Vị Tính</th>
+                <th style="border: 1px solid black; padding: 5px; width: 10%;">Số Lượng</th>
+                <th style="border: 1px solid black; padding: 5px; width: 20%;">Đơn Giá</th>
+                <th style="border: 1px solid black; padding: 5px; width: 15%;">Thành Tiền</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                <td style="border: 1px solid black; padding: 5px;">1</td>
+                <td style="border: 1px solid black; padding: 5px;">${TenKhoaHoc} / ${TenLop}</td>
+                <td style="border: 1px solid black; padding: 5px;">Khóa Học</td>
+                <td style="border: 1px solid black; padding: 5px;">1</td>
+                <td style="border: 1px solid black; padding: 5px;">${Gia}</td>
+                <td style="border: 1px solid black; padding: 5px;">${Gia}</td>
+                </tr>
+                <tr>
+                <td colspan="5" style="border: 1px solid black; padding: 5px; text-align: left; font-weight: bold;">
+                    Tổng Hóa Đơn:
+                </td>
+                <td style="border: 1px solid black; padding: 5px; font-weight: bold;">
+                    ${Gia} VNĐ
+                </td>
+                </tr>
+            </tbody>
+            </table>
+
+            <div style="height: 130px; width: 100%; margin-top: 20px; display: flex; font-weight: bold; ">
+            <div style="flex: 1; text-align: center; width: 100%;">Người Mua Hàng</div>
+            <div style="flex: 1; text-align: center; width: 100%;">Người Bán Hàng</div>
+            <div style="flex: 1; text-align: center; width: 100%;">Cơ Quan Thuế</div>
+            </div>
+
+            </div>
+        `
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        res.json({ trangThai: "tc" });
+        console.log("gui email hoa don thanh cong");
+    } catch (error) {
+        console.error("gui email hoa don that bai:", error);
+        res.status(500).json({ trangThai: "tb", mess: String(error) });
+    }
+});
+
+// API Quản lý Hóa Đơn (Admin)
+app.get('/api/hoadon', xacThuc, async (req, res) => {
+    try {
+        const data = await HoaDon.find();
+        res.status(200).json({ trangThai: "tc", data });
+    } catch (err) {
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+// api lấy hóa đơn lop học còn hoạt động
+
+app.get('/api/hoadon-hoat-dong', xacThuc, async (req, res) => {
+    try {
+        const data = await HoaDon.find();
+        let newDataLH = [];
+        let emails = new Set();
+        
+        for (let item of data) {
+            if (!item.idLopHoc) continue;
+            const checkLH = await LopHoc.findById(item.idLopHoc);
+            if (!checkLH) continue;
+            
+            const status = (checkLH.trangThai || "").trim().toLowerCase();
+            // Chấp nhận nhiều biến thể của trạng thái hoạt động
+            if (status === "khai giảng" || status === "đang hoạt động" || status === "hoạt động") {
+                newDataLH.push(item);
+                if (item.Email) emails.add(item.Email);
+            }
+        }
+        
+        // Chỉ lấy tài khoản của những học viên trong các hóa đơn đã lọc
+        const uniqueEmails = Array.from(emails);
+        const newDataTK = await TaiKhoan.find({ Email: { $in: uniqueEmails } });
+        
+        console.log(`Trả về ${newDataLH.length} hóa đơn và ${newDataTK.length} tài khoản hoạt động`);
+        res.status(200).json({ trangThai: "tc", dataLH: newDataLH, dataTK: newDataTK });
+    } catch (err) {
+        console.error("Lỗi /api/hoadon-hoat-dong:", err);
+        res.status(500).json({ trangThai: "tb", mess: err.message });
+    }
+});
+
+// api tài hóa đơn tài khoản 
+app.get('/api/hoadon-tai-khoan', xacThuc, async (req, res) => {
+    
+    
+    try {
+        console.log("ádfasdasdf");
+        const data = await HoaDon.find();
+        let newData=[];
+        for(let item of data){
+            const checkTk = await TaiKhoan.find({Email:item.Email});
+            console.log(checkTk);
+            
+            if(checkTk) {
+                newData.push(checkTk[0]); 
+            };            
+        }
+        console.log(newData);
+        console.log("trả về tài khoản mua khóa học  thành công")
+        res.status(200).json({ trangThai: "tc", data:newData });
+    } catch (err) {
+        res.status(500).json({ trangThai: "tb" });
+        console.log("trả về tài khoản mua khóa học  thất bại : "+err)
+    }
+});
+////////////////////////////////////////
+
+
+app.patch('/api/hoadon/:id', xacThuc, async (req, res) => {
+    try {
+        const { trangThai } = req.body;
+        await HoaDon.findByIdAndUpdate(req.params.id, { trangThai });
+        res.status(200).json({ trangThai: "tc" });
+    } catch (err) {
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
 
 /// api thếm hóa đơn
 
@@ -1004,11 +1261,12 @@ app.post('/api/them-hoa-don', async (req, res) => {
             timeZone: "Asia/Ho_Chi_Minh",
         });
         const { maHoaDon, idKhoaHoc, idLopHoc, email, TenKhoaHoc, TenLop, Gia } = req.body;
+        console.log("[them-hoa-don] Nhan du lieu:", { maHoaDon, idKhoaHoc, idLopHoc, email, TenKhoaHoc, TenLop, Gia });
         const newHoaDon = new HoaDon({
-            maHoaDon: maHoaDon,
+            maHoaDon: String(maHoaDon),
             idKhoaHoc: idKhoaHoc,
             idLopHoc: idLopHoc,
-            email: email,
+            Email: email,
             TenKhoaHoc: TenKhoaHoc,
             TenLop: TenLop,
             Gia: Gia,
@@ -1018,14 +1276,14 @@ app.post('/api/them-hoa-don', async (req, res) => {
         res.status(200).json({
             trangThai: "tc"
         })
-        console.log("them hd tk");
+        console.log("[them-hoa-don] Them hoa don thanh cong, ID:", newHoaDon._id);
 
     } catch (err) {
         res.status(500).json({
             trangThai: "tb",
             mess: "loi server " + err
         })
-        console.log("them hd tb");
+        console.log("[them-hoa-don] That bai:", err);
 
     }
 })
@@ -1036,7 +1294,7 @@ app.get('/api/kt-trung-khoa-hoc', xacThuc, async (req, res) => {
     try {
         const email = req.user.Email;
 
-        const checkHD = await HoaDon.find({ email: email });
+        const checkHD = await HoaDon.find({ Email: email });
 
         if (checkHD.length === 0) return res.status(200).json({
             trangThai: true
@@ -1073,7 +1331,7 @@ app.get('/api/kt-trung-khoa-hoc', xacThuc, async (req, res) => {
 app.get('/api/lay-tt-hoaDon', xacThuc, async (req, res) => {
     try {
         const email = req.user.Email;
-        const data = await HoaDon.find({ email: email });
+        const data = await HoaDon.find({ Email: email });
         if (data.length === 0) {
             console.log("tai khoan khong có hóa đơn");
             return res.status(200).json({ trangThai: "ktt" });
@@ -1095,16 +1353,24 @@ app.get('/api/ten-id-lopHoc', xacThuc, async (req, res) => {
     try {
         let data = [];
         const email = req.user.Email;
-        const dsHoaDown = await HoaDon.find({ email: email }).select('idLopHoc  TenKhoaHoc TenLop');
+        const dsHoaDown = await HoaDon.find({ Email: email }).select('idLopHoc  TenKhoaHoc TenLop trangThai');
 
         if (dsHoaDown.length === 0) {
             return res.status(404).json({ trangThai: "ktt" });
         }
         for (const item of dsHoaDown) {
-           
+          
             const check = await LopHoc.findById(item.idLopHoc);
             let them={}
-            if(!check){
+            if(item.trangThai === "Ẩn"){
+                them = {
+                    idLopHoc: item.idLopHoc,
+                    TenKhoaHoc: item.TenKhoaHoc,
+                    TenLop: item.TenLop,
+                    trangThai: "Đã bị chặn"
+                }
+            }
+            else if(!check){
                 them = {
                     idLopHoc: item.idLopHoc,
                     TenKhoaHoc: item.TenKhoaHoc,
@@ -1136,8 +1402,19 @@ app.get('/api/ten-id-lopHoc', xacThuc, async (req, res) => {
 ////////////// CHAT BOT AI//////////
 
 require('dotenv').config();
+//  dành cho tư vấn
 
 const groq = new Groq(process.env.GROQ_API_KEY);
+// dành cho video bài giảng
+const groqVideo = new Groq(process.env.GROQ_API_KEY_github);
+
+console.log("KIỂM TRA KEY EMAIL:", process.env.GROQ_API_KEY);
+console.log("KIỂM TRA KEY GITHUB:", process.env.GROQ_API_KEY_github);
+
+
+
+
+
 
 /// api tạo tin nhắn 
 
@@ -1171,18 +1448,44 @@ app.post('/api/tap-tn-ai', async (req, res) => {
 
         const tinNhanHeThong = {
             role: "system",
-            content: `Bạn là tư vấn viên ảo của hệ thống E-learning. 
-                Dưới đây là danh sách toàn bộ các khóa học và lớp học của từng khóa hiện có hiện có trong hệ thống (dữ liệu JSON):
-                ${duLieuKH}
-                 ${duLieuLH}
-                Đây là lịch sử chat trước đó để bạn có thể hiêu ngữ cảnh hơn :
-                ${duLieuLSC}
+            content: `Bạn là EduMate - Trợ lý tư vấn ảo thông minh của hệ thống luyện thi TOEIC trực tuyến EduMate. Nhiệm vụ của bạn là hỗ trợ, tư vấn khóa học và giải đáp thắc mắc của học viên một cách chính xác, thân thiện.
 
-                Nguyên tắc:
-                1. CHỈ tư vấn dựa trên danh sách khóa học và lớp học ở trên. Không bịa đặt thêm khóa học ngoài.
-                2. Nếu người dùng hỏi khóa học không có trong danh sách, hãy báo là hệ thống chưa có và gợi ý khóa học gần giống nhất.
-                3. Trả lời thân thiện, xưng "mình" và gọi "bạn", format chữ thuần túy, không dùng dấu sao (**).
-                4. Trả lời thật ngắn gọn, súc tích (dưới 100 chữ nếu có thể).
+### 1. DỮ LIỆU HỆ THỐNG
+- Danh sách khóa học hiện có (JSON): ${duLieuKH}
+- Danh sách lớp học hiện có (JSON): ${duLieuLH}
+- Lịch sử cuộc trò chuyện trước đó: ${duLieuLSC}
+
+### 2. THÔNG TIN TÍNH NĂNG & ĐƯỜNG DẪN GỐC
+Hệ thống CHỈ CÓ các đường dẫn sau đây, tuyệt đối không tự ý thay đổi cấu trúc URL:
+- Xem chi tiết khóa học: http://localhost:5173/khoahoc/[id_khoa_hoc] (Thay [id_khoa_hoc] bằng ID thực tế lấy từ dữ liệu khóa học).
+- Kiểm tra đầu vào (MIỄN PHÍ): Gồm 27 câu hỏi làm trong 35 phút để biết trình độ. Chỉ cần đăng nhập là làm được, không cần mua khóa học. Link: http://localhost:5173/HV_kiemTraDauVao
+- Luyện đề (Trả phí): Giải đề TOEIC chuẩn ETS 4 kỹ năng, có tính năng chấm chữa ngay tại chỗ cho từng câu hỏi.
+- Thi thử (Trả phí): Làm bài thi mô phỏng TOEIC chuẩn ETS 4 kỹ năng, làm xong hết bài mới được chấm điểm.
+- Quyền lợi khi mua khóa học: Học với giảng viên, tự học qua video bài giảng (mỗi video có chatbot riêng), học từ vựng Flashcard (tự thêm hoặc dùng có sẵn), bài tập có AI chấm chữa, lớp học Online (link meeting của giáo viên), tham gia cộng đồng (link Zalo/Facebook).
+- Đăng ký nhận tư vấn từ người thật: Điền form tại trang chủ http://localhost:5173/ (Giảng viên sẽ liên hệ qua SĐT hoặc Email).
+
+### 3. NGUYÊN TẮC ỨNG XỬ VÀ ĐỊNH DẠNG (Bắt buộc tuân thủ)
+- Phong cách: Thân thiện, gần gũi. Luôn xưng "mình" và gọi học viên là "bạn". 
+- Độ dài: Câu trả lời phải thật ngắn gọn, súc tích, đi thẳng vào vấn đề và dưới 100 chữ.
+- Định dạng văn bản: Chỉ sử dụng chữ thuần túy (Plain text). TUYỆT ĐỐI KHÔNG sử dụng dấu sao (**) để in đậm hoặc viết chữ in hoa vô tội vạ.
+- QUY TẮC ĐƯỜNG DẪN (CLICKABLE LINK): BẮT BUỘC viết dưới dạng Markdown Link: [Tên hành động hoặc Tên khóa học](Đường dẫn thực tế). KHÔNG được gửi link thô.
+- TUYỆT ĐỐI KHÔNG BỊA LINK LỚP HỌC: Hệ thống không có link riêng cho từng lớp. Nếu học viên hỏi về một Lớp học, phải tìm xem lớp đó thuộc Khóa học nào và trả về đường dẫn của Khóa học đó.
+
+### 4. HƯỚNG DẪN XỬ LÝ CÁC TÌNH HUỐNG THƯỜNG GẶP (EDGE CASES)
+- Tình huống 1: Học viên phân vân không biết trình độ bản thân hoặc không biết chọn khóa nào phù hợp.
+  => Xử lý: Gợi ý học viên tham gia làm bài [Kiểm tra đầu vào](http://localhost:5173/HV_kiemTraDauVao) miễn phí để biết sức mình trước.
+- Tình huống 2: Học viên hỏi về các khóa học KHÔNG CÓ trong dữ liệu (Ví dụ: IELTS, Giao tiếp, Tiếng Trung...).
+  => Xử lý: Lịch sự thông báo EduMate hiện tại chuyên sâu về TOEIC và chưa có khóa học đó. Gợi ý họ [Điền form tư vấn tại đây](http://localhost:5173/) để trung tâm ghi nhận nhu cầu.
+- Tình huống 3: Học viên hỏi các thông tin không có trong JSON (Ví dụ: Học phí bao nhiêu, Lịch khai giảng cụ thể ngày mấy, Giảng viên là ai nếu mà trong JSON không ghi).
+  => Xử lý: Không tự bịa thông tin. Hãy hướng dẫn học viên bấm vào [Chi tiết khóa học](http://localhost:5173/khoahoc/[id_khoa_hoc]) mà học viên quan tâm hoặc phù hợp để xem hoặc [Điền form tư vấn tại đây](http://localhost:5173/) để tư vấn viên liên hệ giải đáp.
+- Tình huống 4: Học viên hỏi về Lớp học (Ví dụ: "Lớp TOEIC-A1 học khi nào?").
+  => Xử lý: Kiểm tra lớp TOEIC-A1 thuộc khóa nào (Ví dụ: Khóa TOEIC 550). Trả lời: "Lớp TOEIC-A1 thuộc khóa TOEIC 550. Bạn xem lịch học chi tiết tại [Khóa học TOEIC 550](http://localhost:5173/khoahoc/toeic550) nhé."
+
+### 5. VÍ DỤ MẪU
+- Đúng: "Để biết chính xác trình độ của mình, bạn hãy tham gia [Kiểm tra đầu vào](http://localhost:5173/HV_kiemTraDauVao) miễn phí nhé. Bài test gồm 27 câu trong 35 phút thôi nè."
+- Đúng: "Hiện tại hệ thống chưa có khóa IELTS. Bạn có thể tham khảo các [Khóa học TOEIC 550](http://localhost:5173/khoahoc/t550) hiện có, hoặc [Điền form tư vấn tại đây](http://localhost:5173/) để tụi mình hỗ trợ thêm nha."
+- Sai: "Bạn vào link http://localhost:5173/HV_kiemTraDauVao để test nhé." (Vi phạm lỗi gửi link thô).
+- Sai: "Bạn xem thông tin lớp tại **[Lớp TOEIC A1](http://localhost:5173/lophoc/a1)** nha." (Vi phạm lỗi bịa link lớp và dùng dấu **).
                 `
 
         };
@@ -1204,7 +1507,7 @@ app.post('/api/tap-tn-ai', async (req, res) => {
 
         const chatCompletion = await groq.chat.completions.create({
             messages: messages,
-            model: "llama-3.3-70b-versatile", // Dùng Llama 3 70B của Meta (Facebook) cực kỳ thông minh
+            model: "llama-3.1-8b-instant", // Dùng Llama 3 70B của Meta (Facebook) cực kỳ thông minh
             temperature: 0.5, // Số từ 0 đến 1 (0.5 là vừa đủ cân bằng giữa sáng tạo và chính xác)
         });
 
@@ -1233,19 +1536,38 @@ app.post('/api/chat-video-ai', async (req, res) => {
 
         const tinNhanHeThong = {
             role: "system",
-            content: `Bạn là trợ lý học tập ảo của nền tảng E-learning, tên là EduMate.
-                Học viên đang xem một video bài giảng. Đây là tóm tắt nội dung chính của video:
-                """${videoSummary}"""
+            content: `Bạn là EduMate — trợ lý học tập ảo của nền tảng E-learning.
 
-                Đây là lịch sử chat trước đó để bạn hiểu ngữ cảnh:
-                ${duLieuLSC}
+## Nhiệm vụ
+Hỗ trợ học viên đang xem video bài giảng bằng cách:
+- Giải thích, làm rõ nội dung trong video
+- Trả lời thắc mắc liên quan đến bài học
+- Tìm kiếm và cung cấp thêm kiến thức liên quan đến chủ đề bài học khi học viên yêu cầu
 
-                Nguyên tắc trả lời:
-                1. Hãy giải thích, làm rõ hoặc trả lời các thắc mắc của học viên dựa trên tóm tắt nội dung video trên.
-                2. Nếu học viên hỏi thông tin nằm ngoài nội dung video, hãy lịch sự thông báo rằng thông tin này không có trong video hiện tại nhưng bạn vẫn có thể trả lời nếu cần thiết.
-                3. Xưng "mình" và gọi học viên là "bạn". Trả lời thân thiện, mạch lạc.
-                4. Cố gắng trả lời ngắn gọn, dễ hiểu, tránh viết quá dài dòng. Chỉ dùng văn bản thuần túy, hạn chế dùng các ký tự đánh dấu định dạng markdown phức tạp.
-                `
+## Nội dung video hiện tại
+${videoSummary ? `"""${videoSummary}"""` : "Hiện chưa có tóm tắt nội dung video. Hãy hỗ trợ học viên dựa trên câu hỏi của họ."}
+
+## Lịch sử hội thoại
+${duLieuLSC ? duLieuLSC : "Chưa có lịch sử hội thoại. Đây là lần đầu học viên nhắn tin."}
+
+## Nguyên tắc trả lời
+
+### Phân loại câu hỏi
+- Nếu câu hỏi LIÊN QUAN đến nội dung video: trả lời dựa trên tóm tắt video, ưu tiên thông tin trong video trước.
+- Nếu câu hỏi NGOÀI nội dung video nhưng liên quan đến chủ đề bài học: thông báo ngắn gọn rằng nội dung này không có trong video, sau đó chủ động giải thích thêm để hỗ trợ học viên.
+- Nếu câu hỏi HOÀN TOÀN không liên quan đến bài học: lịch sự từ chối và nhắc học viên tập trung vào nội dung bài giảng.
+
+### Phong cách
+- Xưng "mình", gọi học viên là "bạn"
+- Thân thiện, ngắn gọn, dễ hiểu
+- Chỉ dùng văn bản thuần túy, không dùng markdown (không dùng **, ##, -, hoặc các ký tự định dạng phức tạp)
+- Nếu cần liệt kê, dùng số thứ tự: 1. 2. 3.
+
+### Xử lý trường hợp đặc biệt
+- Nếu câu hỏi không rõ ý: hỏi lại ngắn gọn để làm rõ, không tự đoán sai ý
+- Nếu không chắc chắn về thông tin: nói rõ "mình không chắc về điều này" thay vì trả lời sai
+- Nếu học viên chào hỏi hoặc nhắn tin không phải câu hỏi: phản hồi tự nhiên, thân thiện và hỏi mình có thể giúp gì
+- Nếu tóm tắt video trống hoặc không đủ thông tin: thừa nhận giới hạn và vẫn cố gắng hỗ trợ dựa trên câu hỏi của học viên`
         };
 
         const messages = [
@@ -1253,9 +1575,9 @@ app.post('/api/chat-video-ai', async (req, res) => {
             { role: "user", content: message }
         ];
 
-        const chatCompletion = await groq.chat.completions.create({
+        const chatCompletion = await groqVideo.chat.completions.create({
             messages: messages,
-            model: "llama-3.3-70b-versatile",
+            model: "llama-3.1-8b-instant",
             temperature: 0.6,
         });
 
@@ -1319,7 +1641,7 @@ function chuyenFileChoGemini(duongDanFile, mimeType) {
 
 app.post(`/api/chamDiemTuLuan`, async (req, res) => {
     try {
-        const { CauHoi, dapAnHocVien, giaiThich, anh, type } = req.body;
+        const { CauHoi, dapAnHocVien, giaiThich, anh, type, noiDungDoc , loaiBai} = req.body;
         // 1. Xử lý ảnh (Đã sửa triệt để lỗi ép kiểu MIME)
 
 
@@ -1337,26 +1659,42 @@ app.post(`/api/chamDiemTuLuan`, async (req, res) => {
                 khoangDiem = "từ 0 đến 6 (thấp nhất là 0 điểm và cao nhất là 6 điểm)";
             }
             const duLieuGoiDi = [];
-            const yeuCau = `
-                    Bạn là một giám khảo chấm thi tiếng Anh chuẩn TOEIC/IELTS phần Writing (Tự luận).
-                    
-                    THÔNG TIN BÀI THI:
-                    - Câu hỏi: "${CauHoi}"
-                    - Hình ảnh đính kèm: (Học viên sẽ miêu tả dựa trên hình ảnh được cung cấp nếu có).
-                    - Yêu cầu/Giải thích của giáo viên: "${giaiThich}"
+            const yeuCau = `Bạn là giám khảo chấm thi Writing chuẩn ETS. Nhiệm vụ duy nhất của bạn là chấm điểm và nhận xét bài làm của học viên.
 
-                    BÀI LÀM CỦA HỌC VIÊN:
-                    "${dapAnHocVien}"
+            ## THÔNG TIN ĐỀ THI
+            - Loại bài: ${loaiBai}
+            - Câu hỏi: ${CauHoi}
+            ${noiDungDoc ? `- Nội dung bài đọc: ${noiDungDoc}` : ""}
+            ${giaiThich ? `- Hướng dẫn của giáo viên: ${giaiThich}` : ""}
+            ${anh ? `- Đề có hình ảnh đính kèm: học viên cần mô tả/viết dựa trên hình ảnh đó` : ""}
 
-                    NHIỆM VỤ:
-                    Hãy đọc bài làm của học viên, phân tích độ chuẩn xác về ngữ pháp, từ vựng và sự liên quan đến câu hỏi cũng như hình ảnh của đề thi.
-                    
-                    QUAN TRỌNG: Hãy trả về kết quả ĐÚNG theo định dạng JSON sau, không bọc markdown, không kèm theo bất kỳ chữ nào khác:
-                    {
-                        "diemUocTinh": "Số điểm ${khoangDiem}",
-                        "loiNhanXet": "Lời nhận xét chi tiết bằng tiếng Việt để học viên có thể cải thiện (ngắn gọn nhất có thể, đúng trọng tâm),(LƯU Ý QUAN TRỌNG: Viết liền trên 1 dòng duy nhất, tuyệt đối KHÔNG sử dụng ký tự xuống dòng ở đây)"
-                    }
-                    `;
+            ## BÀI LÀM CỦA HỌC VIÊN
+            ${dapAnHocVien ? `"${dapAnHocVien}"` : "KHÔNG CÓ NỘI DUNG — học viên bỏ trống"}
+
+            ## THANG ĐIỂM
+            Chấm theo thang: ${khoangDiem}
+            Quy tắc điểm tối thiểu: nếu học viên bỏ trống hoàn toàn → trả về điểm thấp nhất của thang.
+
+            ## TIÊU CHÍ CHẤM ĐIỂM (theo thứ tự ưu tiên)
+            1. Mức độ hoàn thành yêu cầu đề bài (có trả lời đúng trọng tâm không)
+            2. Ngữ pháp (độ chính xác câu, thì, cấu trúc)
+            3. Từ vựng (sự phù hợp, đa dạng, chính xác)
+            4. Tính mạch lạc và liên kết ý
+            5. Độ dài và mức độ phát triển ý (nếu yêu cầu đề có quy định)
+
+            ## HƯỚNG DẪN NHẬN XÉT
+            - Viết bằng tiếng Việt, ngắn gọn, đúng trọng tâm
+            - Nêu rõ: điểm mạnh → điểm yếu → gợi ý cải thiện cụ thể
+            - Không khen chung chung, không dùng từ sáo rỗng
+            - Nếu bài bỏ trống: chỉ ghi "Học viên không làm bài"
+            - Tuyệt đối không xuống dòng, không dùng ký tự \\n, viết thành 1 chuỗi liên tục
+
+            ## OUTPUT
+            Trả về JSON hợp lệ duy nhất, không markdown, không giải thích thêm:
+            {
+            "diemUocTinh": <số thực trong khoảng ${khoangDiem}>,
+            "loiNhanXet": "<nhận xét trên 1 dòng duy nhất>"
+            }`;
             duLieuGoiDi.push(yeuCau);
             // LƯU Ý: Đảm bảo hàm chứa đoạn code này có chữ 'async' ở đầu nhé!
             if (anh !== "") {
@@ -1423,26 +1761,42 @@ app.post(`/api/chamDiemTuLuan`, async (req, res) => {
                     khoangDiem = "từ 0 đến 6 (thấp nhất là 0 điểm và cao nhất là 6 điểm)";
                 }
                 const duLieuGoiDi = [];
-                const yeuCau = `
-                    Bạn là một giám khảo chấm thi tiếng Anh chuẩn TOEIC/IELTS phần Writing (Tự luận).
-                    
-                    THÔNG TIN BÀI THI:
-                    - Câu hỏi: "${CauHoi}"
-                    - Hình ảnh đính kèm: (Học viên sẽ miêu tả dựa trên hình ảnh được cung cấp nếu có).
-                    - Yêu cầu/Giải thích của giáo viên: "${giaiThich}"
+                const yeuCau = `Bạn là giám khảo chấm thi Writing chuẩn ETS. Nhiệm vụ duy nhất của bạn là chấm điểm và nhận xét bài làm của học viên.
 
-                    BÀI LÀM CỦA HỌC VIÊN:
-                    "${dapAnHocVien}"
+            ## THÔNG TIN ĐỀ THI
+            - Loại bài: ${loaiBai}
+            - Câu hỏi: ${CauHoi}
+            ${noiDungDoc ? `- Nội dung bài đọc: ${noiDungDoc}` : ""}
+            ${giaiThich ? `- Hướng dẫn của giáo viên: ${giaiThich}` : ""}
+            ${anh ? `- Đề có hình ảnh đính kèm: học viên cần mô tả/viết dựa trên hình ảnh đó` : ""}
 
-                    NHIỆM VỤ:
-                    Hãy đọc bài làm của học viên, phân tích độ chuẩn xác về ngữ pháp, từ vựng và sự liên quan đến câu hỏi cũng như hình ảnh của đề thi.
-                    
-                    QUAN TRỌNG: Hãy trả về kết quả ĐÚNG theo định dạng JSON sau, không bọc markdown, không kèm theo bất kỳ chữ nào khác:
-                    {
-                        "diemUocTinh": "Số điểm ${khoangDiem}",
-                        "loiNhanXet": "Lời nhận xét chi tiết bằng tiếng Việt để học viên có thể cải thiện (ngắn gọn nhất có thể, đúng trọng tâm),(LƯU Ý QUAN TRỌNG: Viết liền trên 1 dòng duy nhất, tuyệt đối KHÔNG sử dụng ký tự xuống dòng ở đây)"
-                    }
-                    `;
+            ## BÀI LÀM CỦA HỌC VIÊN
+            ${dapAnHocVien ? `"${dapAnHocVien}"` : "KHÔNG CÓ NỘI DUNG — học viên bỏ trống"}
+
+            ## THANG ĐIỂM
+            Chấm theo thang: ${khoangDiem}
+            Quy tắc điểm tối thiểu: nếu học viên bỏ trống hoàn toàn → trả về điểm thấp nhất của thang.
+
+            ## TIÊU CHÍ CHẤM ĐIỂM (theo thứ tự ưu tiên)
+            1. Mức độ hoàn thành yêu cầu đề bài (có trả lời đúng trọng tâm không)
+            2. Ngữ pháp (độ chính xác câu, thì, cấu trúc)
+            3. Từ vựng (sự phù hợp, đa dạng, chính xác)
+            4. Tính mạch lạc và liên kết ý
+            5. Độ dài và mức độ phát triển ý (nếu yêu cầu đề có quy định)
+
+            ## HƯỚNG DẪN NHẬN XÉT
+            - Viết bằng tiếng Việt, ngắn gọn, đúng trọng tâm
+            - Nêu rõ: điểm mạnh → điểm yếu → gợi ý cải thiện cụ thể
+            - Không khen chung chung, không dùng từ sáo rỗng
+            - Nếu bài bỏ trống: chỉ ghi "Học viên không làm bài"
+            - Tuyệt đối không xuống dòng, không dùng ký tự \\n, viết thành 1 chuỗi liên tục
+
+            ## OUTPUT
+            Trả về JSON hợp lệ duy nhất, không markdown, không giải thích thêm:
+            {
+            "diemUocTinh": <số thực trong khoảng ${khoangDiem}>,
+            "loiNhanXet": "<nhận xét trên 1 dòng duy nhất>"
+            }`;
                 duLieuGoiDi.push({ type: "text", text: yeuCau });
                 // LƯU Ý: Đảm bảo hàm chứa đoạn code này có chữ 'async' ở đầu nhé!
                 if (anh && anh !== "") {
@@ -1501,26 +1855,42 @@ app.post(`/api/chamDiemTuLuan`, async (req, res) => {
                         khoangDiem = "từ 0 đến 6 (thấp nhất là 0 điểm và cao nhất là 6 điểm)";
                     }
                     const duLieuGoiDi = [];
-                    const yeuCau = `
-                    Bạn là một giám khảo chấm thi tiếng Anh chuẩn TOEIC/IELTS phần Writing (Tự luận).
-                    
-                    THÔNG TIN BÀI THI:
-                    - Câu hỏi: "${CauHoi}"
-                    - Hình ảnh đính kèm: (Học viên sẽ miêu tả dựa trên hình ảnh được cung cấp nếu có).
-                    - Yêu cầu/Giải thích của giáo viên: "${giaiThich}"
+                    const yeuCau = `Bạn là giám khảo chấm thi Writing chuẩn ETS. Nhiệm vụ duy nhất của bạn là chấm điểm và nhận xét bài làm của học viên.
 
-                    BÀI LÀM CỦA HỌC VIÊN:
-                    "${dapAnHocVien}"
+            ## THÔNG TIN ĐỀ THI
+            - Loại bài: ${loaiBai}
+            - Câu hỏi: ${CauHoi}
+            ${noiDungDoc ? `- Nội dung bài đọc: ${noiDungDoc}` : ""}
+            ${giaiThich ? `- Hướng dẫn của giáo viên: ${giaiThich}` : ""}
+            ${anh ? `- Đề có hình ảnh đính kèm: học viên cần mô tả/viết dựa trên hình ảnh đó` : ""}
 
-                    NHIỆM VỤ:
-                    Hãy đọc bài làm của học viên, phân tích độ chuẩn xác về ngữ pháp, từ vựng và sự liên quan đến câu hỏi cũng như hình ảnh của đề thi.
-                    
-                    QUAN TRỌNG: Hãy trả về kết quả ĐÚNG theo định dạng JSON sau, không bọc markdown, không kèm theo bất kỳ chữ nào khác:
-                    {
-                        "diemUocTinh": "Số điểm ${khoangDiem}",
-                        "loiNhanXet": "Lời nhận xét chi tiết bằng tiếng Việt để học viên có thể cải thiện (ngắn gọn nhất có thể, đúng trọng tâm),(LƯU Ý QUAN TRỌNG: Viết liền trên 1 dòng duy nhất, tuyệt đối KHÔNG sử dụng ký tự xuống dòng ở đây)"
-                    }
-                    `;
+            ## BÀI LÀM CỦA HỌC VIÊN
+            ${dapAnHocVien ? `"${dapAnHocVien}"` : "KHÔNG CÓ NỘI DUNG — học viên bỏ trống"}
+
+            ## THANG ĐIỂM
+            Chấm theo thang: ${khoangDiem}
+            Quy tắc điểm tối thiểu: nếu học viên bỏ trống hoàn toàn → trả về điểm thấp nhất của thang.
+
+            ## TIÊU CHÍ CHẤM ĐIỂM (theo thứ tự ưu tiên)
+            1. Mức độ hoàn thành yêu cầu đề bài (có trả lời đúng trọng tâm không)
+            2. Ngữ pháp (độ chính xác câu, thì, cấu trúc)
+            3. Từ vựng (sự phù hợp, đa dạng, chính xác)
+            4. Tính mạch lạc và liên kết ý
+            5. Độ dài và mức độ phát triển ý (nếu yêu cầu đề có quy định)
+
+            ## HƯỚNG DẪN NHẬN XÉT
+            - Viết bằng tiếng Việt, ngắn gọn, đúng trọng tâm
+            - Nêu rõ: điểm mạnh → điểm yếu → gợi ý cải thiện cụ thể
+            - Không khen chung chung, không dùng từ sáo rỗng
+            - Nếu bài bỏ trống: chỉ ghi "Học viên không làm bài"
+            - Tuyệt đối không xuống dòng, không dùng ký tự \\n, viết thành 1 chuỗi liên tục
+
+            ## OUTPUT
+            Trả về JSON hợp lệ duy nhất, không markdown, không giải thích thêm:
+            {
+            "diemUocTinh": <số thực trong khoảng ${khoangDiem}>,
+            "loiNhanXet": "<nhận xét trên 1 dòng duy nhất>"
+            }`;
                     duLieuGoiDi.push({ type: "text", text: yeuCau });
                     const apiKey = process.env.MISTRAL_API_KEY;
                     const client = new Mistral({ apiKey: apiKey });
@@ -1681,6 +2051,7 @@ const { PitchDetector } = require('pitchy');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
 const { type } = require('os');
+const { log } = require('console');
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
 // --- 1. TRẠM CHUYỂN ĐỔI ÂM THANH (FFMPEG) ---
@@ -1800,7 +2171,8 @@ const openai1 = new OpenAI({
 
 
 app.post(`/api/chamDiemSpeaking`, async (req, res) => {
-    const { CauHoi, dapAnHocVien, giaiThich, anh, type } = req.body;
+    const { CauHoi, dapAnHocVien, giaiThich, anh, type ,noiDungDoc,loaiBai} = req.body;
+  
 
     try {
         const nguDieu = await chayThuHeThong(dapAnHocVien);
@@ -1831,25 +2203,52 @@ app.post(`/api/chamDiemSpeaking`, async (req, res) => {
             let duLieuGoiDi = [];
 
 
-            const yeuCau = `
-                    Bạn là một giám khảo chấm thi tiếng Anh chuẩn TOEIC/IELTS.
-                    THÔNG TIN BÀI THI:
-                        - Câu hỏi: "${CauHoi}"
-                        - Hình ảnh đính kèm: có thể có hoặc không.
-                        - Yêu cầu/Giải thích của giáo viên: "${giaiThich}"
+            const yeuCau = `Bạn là giám khảo chấm thi Speaking chuẩn ETS. Nhiệm vụ duy nhất của bạn là chấm điểm và nhận xét bài nói của học viên.
 
-                    DỮ LIỆU BÀI LÀM CỦA HỌC VIÊN:
-                        - Nội dung học viên đã nói: "${Whisper.text}"
-                        - Đánh giá ngữ điệu giọng nói: "${nguDieu.nhanXetNguDieu}"
+            ## THÔNG TIN ĐỀ THI
+            - Loại bài: ${loaiBai}
+            - Câu hỏi: ${CauHoi}
+            ${noiDungDoc ? `- Nội dung bài đọc: ${noiDungDoc}` : ""}
+            ${giaiThich ? `- Hướng dẫn của giáo viên: ${giaiThich}` : ""}
+            ${anh ? `- Đề có hình ảnh đính kèm: học viên cần mô tả/trả lời dựa trên hình ảnh đó` : ""}
 
-                    Dựa vào nội dung bóc băng và đánh giá ngữ điệu, hãy phân tích độ trôi chảy, ngữ pháp, từ vựng và sự liên quan đến đề thi.
-                    
-                    QUAN TRỌNG: Hãy trả về kết quả ĐÚNG theo định dạng JSON sau, không bọc markdown, không kèm chữ nào khác:
-                    {
-                        "diemUocTinh": "Số điểm từ 0-8",
-                        "loiNhanXet": "Lời nhận xét chi tiết bằng tiếng Việt để học viên có thể cải thiện (ngắn gọn nhất có thể, đúng trọng tâm),(LƯU Ý QUAN TRỌNG: Viết liền trên 1 dòng duy nhất, tuyệt đối KHÔNG sử dụng ký tự xuống dòng ở đây)"
-                    }
-                    `;
+            ## BÀI LÀM CỦA HỌC VIÊN
+            ${Whisper.text ? `- Nội dung học viên đã nói (speech-to-text): "${Whisper.text}"` : "- Nội dung: KHÔNG CÓ — học viên không nói gì"}
+            ${nguDieu.nhanXetNguDieu ? `- Đánh giá ngữ điệu (từ hệ thống phân tích giọng nói): "${nguDieu.nhanXetNguDieu}"` : "- Ngữ điệu: Không có dữ liệu"}
+
+            ## THANG ĐIỂM
+            - Thang điểm cố định: 0.0 – 8.0 (số thực, làm tròn 1 chữ số thập phân)
+            - Điểm 0.0: học viên không nói gì hoặc nội dung hoàn toàn không liên quan
+            - Điểm 8.0: hoàn toàn xuất sắc, không có lỗi đáng kể
+            - Không được trả về điểm ngoài khoảng 0.0 – 8.0
+
+            ## TIÊU CHÍ CHẤM ĐIỂM (theo thứ tự ưu tiên)
+            1. Mức độ hoàn thành yêu cầu đề bài (có trả lời đúng trọng tâm không)
+            2. Độ trôi chảy (fluency): nói tự nhiên, ít ngập ngừng, không dừng quá lâu
+            3. Ngữ pháp (grammar): độ chính xác cấu trúc câu, thì động từ
+            4. Từ vựng (vocabulary): sự phù hợp, đa dạng, chính xác với ngữ cảnh
+            5. Ngữ điệu và phát âm (pronunciation & intonation): dựa trên đánh giá từ hệ thống phân tích giọng nói
+
+            ## HƯỚNG DẪN NHẬN XÉT
+            - Viết bằng tiếng Việt, ngắn gọn, đúng trọng tâm
+            - Cấu trúc nhận xét: điểm mạnh → điểm yếu → gợi ý cải thiện cụ thể
+            - Nhận xét phải bao quát cả 5 tiêu chí, không bỏ sót tiêu chí nào
+            - Không khen chung chung, không dùng từ sáo rỗng
+            - Nếu whisper.text trống hoặc không rõ nghĩa: dựa vào ngữ điệu để chấm, ghi rõ "Không nhận diện được nội dung, chỉ đánh giá dựa trên ngữ điệu"
+            - Nếu cả hai đều trống: ghi "Học viên không thực hiện bài nói"
+            - Tuyệt đối không xuống dòng, không dùng ký tự \\n, viết thành 1 chuỗi liên tục
+
+            ## LƯU Ý ĐẶC BIỆT
+            - Whisper có thể phiên âm sai một số từ → không trừ điểm nặng nếu lỗi nhỏ có thể do nhận diện sai
+            - Ngữ điệu từ hệ thống là dữ liệu bổ trợ, không phải dữ liệu duy nhất để chấm
+            - Ưu tiên đánh giá nội dung và sự liên quan đến đề bài trước khi xét các tiêu chí phụ
+
+            ## OUTPUT
+            Trả về JSON hợp lệ duy nhất, không markdown, không giải thích thêm:
+            {
+            "diemUocTinh": <số thực 0.0–8.0, làm tròn 1 chữ số thập phân>,
+            "loiNhanXet": "<nhận xét trên 1 dòng duy nhất>"
+            }`;
             duLieuGoiDi.push(yeuCau);
             // LƯU Ý: Đảm bảo hàm chứa đoạn code này có chữ 'async' ở đầu nhé!
             if (anh !== "") {
@@ -1890,7 +2289,7 @@ app.post(`/api/chamDiemSpeaking`, async (req, res) => {
             // Dọn dẹp markdown rác và Parse JSON
             const chuoiJsonSach = phanHoiTuAI.replace(/```json|```/g, "").trim();
             const ketQuaHoanChinh = JSON.parse(chuoiJsonSach);
-            console.log("🎯 KẾT QUẢ CHẤM ĐIỂM TỰ LUẬN:", ketQuaHoanChinh);
+            console.log("🎯 KẾT QUẢ CHẤM ĐIỂM TỰ speaking:", ketQuaHoanChinh);
 
             // Trả kết quả thành công và DỪNG API
             return res.status(200).json({
@@ -1908,25 +2307,52 @@ app.post(`/api/chamDiemSpeaking`, async (req, res) => {
 
                 let duLieuGoiDi = [];
 
-                const yeuCau = `
-                    Bạn là một giám khảo chấm thi tiếng Anh chuẩn TOEIC/IELTS.
-                    THÔNG TIN BÀI THI:
-                        - Câu hỏi: "${CauHoi}"
-                        - Hình ảnh đính kèm: có thể có hoặc không.
-                        - Yêu cầu/Giải thích của giáo viên: "${giaiThich}"
+                const yeuCau = `Bạn là giám khảo chấm thi Speaking chuẩn ETS. Nhiệm vụ duy nhất của bạn là chấm điểm và nhận xét bài nói của học viên.
 
-                    DỮ LIỆU BÀI LÀM CỦA HỌC VIÊN:
-                        - Nội dung học viên đã nói: "${Whisper.text}"
-                        - Đánh giá ngữ điệu giọng nói: "${nguDieu.nhanXetNguDieu}"
+            ## THÔNG TIN ĐỀ THI
+            - Loại bài: ${loaiBai}
+            - Câu hỏi: ${CauHoi}
+            ${noiDungDoc ? `- Nội dung bài đọc: ${noiDungDoc}` : ""}
+            ${giaiThich ? `- Hướng dẫn của giáo viên: ${giaiThich}` : ""}
+            ${anh ? `- Đề có hình ảnh đính kèm: học viên cần mô tả/trả lời dựa trên hình ảnh đó` : ""}
 
-                    Dựa vào nội dung bóc băng và đánh giá ngữ điệu, hãy phân tích độ trôi chảy, ngữ pháp, từ vựng và sự liên quan đến đề thi.
-                    
-                    QUAN TRỌNG: Hãy trả về kết quả ĐÚNG theo định dạng JSON sau, không bọc markdown, không kèm chữ nào khác:
-                    {
-                        "diemUocTinh": "Số điểm từ 0-8",
-                        "loiNhanXet": "Lời nhận xét chi tiết bằng tiếng Việt để học viên có thể cải thiện (ngắn gọn nhất có thể, đúng trọng tâm),(LƯU Ý QUAN TRỌNG: Viết liền trên 1 dòng duy nhất, tuyệt đối KHÔNG sử dụng ký tự xuống dòng ở đây)"
-                    }
-                    `;
+            ## BÀI LÀM CỦA HỌC VIÊN
+            ${Whisper.text ? `- Nội dung học viên đã nói (speech-to-text): "${Whisper.text}"` : "- Nội dung: KHÔNG CÓ — học viên không nói gì"}
+            ${nguDieu.nhanXetNguDieu ? `- Đánh giá ngữ điệu (từ hệ thống phân tích giọng nói): "${nguDieu.nhanXetNguDieu}"` : "- Ngữ điệu: Không có dữ liệu"}
+
+            ## THANG ĐIỂM
+            - Thang điểm cố định: 0.0 – 8.0 (số thực, làm tròn 1 chữ số thập phân)
+            - Điểm 0.0: học viên không nói gì hoặc nội dung hoàn toàn không liên quan
+            - Điểm 8.0: hoàn toàn xuất sắc, không có lỗi đáng kể
+            - Không được trả về điểm ngoài khoảng 0.0 – 8.0
+
+            ## TIÊU CHÍ CHẤM ĐIỂM (theo thứ tự ưu tiên)
+            1. Mức độ hoàn thành yêu cầu đề bài (có trả lời đúng trọng tâm không)
+            2. Độ trôi chảy (fluency): nói tự nhiên, ít ngập ngừng, không dừng quá lâu
+            3. Ngữ pháp (grammar): độ chính xác cấu trúc câu, thì động từ
+            4. Từ vựng (vocabulary): sự phù hợp, đa dạng, chính xác với ngữ cảnh
+            5. Ngữ điệu và phát âm (pronunciation & intonation): dựa trên đánh giá từ hệ thống phân tích giọng nói
+
+            ## HƯỚNG DẪN NHẬN XÉT
+            - Viết bằng tiếng Việt, ngắn gọn, đúng trọng tâm
+            - Cấu trúc nhận xét: điểm mạnh → điểm yếu → gợi ý cải thiện cụ thể
+            - Nhận xét phải bao quát cả 5 tiêu chí, không bỏ sót tiêu chí nào
+            - Không khen chung chung, không dùng từ sáo rỗng
+            - Nếu whisper.text trống hoặc không rõ nghĩa: dựa vào ngữ điệu để chấm, ghi rõ "Không nhận diện được nội dung, chỉ đánh giá dựa trên ngữ điệu"
+            - Nếu cả hai đều trống: ghi "Học viên không thực hiện bài nói"
+            - Tuyệt đối không xuống dòng, không dùng ký tự \\n, viết thành 1 chuỗi liên tục
+
+            ## LƯU Ý ĐẶC BIỆT
+            - Whisper có thể phiên âm sai một số từ → không trừ điểm nặng nếu lỗi nhỏ có thể do nhận diện sai
+            - Ngữ điệu từ hệ thống là dữ liệu bổ trợ, không phải dữ liệu duy nhất để chấm
+            - Ưu tiên đánh giá nội dung và sự liên quan đến đề bài trước khi xét các tiêu chí phụ
+
+            ## OUTPUT
+            Trả về JSON hợp lệ duy nhất, không markdown, không giải thích thêm:
+            {
+            "diemUocTinh": <số thực 0.0–8.0, làm tròn 1 chữ số thập phân>,
+            "loiNhanXet": "<nhận xét trên 1 dòng duy nhất>"
+            }`;
                 duLieuGoiDi.push({ type: "text", text: yeuCau });
                 console.log("⏳ Đang nhờ NVIDIA NIM (Llama 3.2 Vision) chấm bài...");
                 // LƯU Ý: Đảm bảo hàm chứa đoạn code này có chữ 'async' ở đầu nhé!
@@ -1985,7 +2411,7 @@ app.post(`/api/chamDiemSpeaking`, async (req, res) => {
                 chuoiJsonSach = chuoiJsonSach.replace(/[\r\n\t]+/g, " ");
                 const ketQuaHoanChinh = JSON.parse(chuoiJsonSach);
 
-                console.log("🎯 KẾT QUẢ TỪ NVIDIA:", ketQuaHoanChinh);
+                console.log("🎯 KẾT QUẢ speaking TỪ NVIDIA:", ketQuaHoanChinh);
                 return res.status(200).json({
                     trangThai: "tc",
                     data: ketQuaHoanChinh
@@ -1998,25 +2424,52 @@ app.post(`/api/chamDiemSpeaking`, async (req, res) => {
                 try {
                     ///// lần 3 yêu cầu MISTRAL chám bài 
                     let duLieuGoiDi = [];
-                    const yeuCau = `
-                    Bạn là một giám khảo chấm thi tiếng Anh chuẩn TOEIC/IELTS.
-                    THÔNG TIN BÀI THI:
-                        - Câu hỏi: "${CauHoi}"
-                        - Hình ảnh đính kèm: có thể có hoặc không.
-                        - Yêu cầu/Giải thích của giáo viên: "${giaiThich}"
+                    const yeuCau = `Bạn là giám khảo chấm thi Speaking chuẩn ETS. Nhiệm vụ duy nhất của bạn là chấm điểm và nhận xét bài nói của học viên.
 
-                    DỮ LIỆU BÀI LÀM CỦA HỌC VIÊN:
-                        - Nội dung học viên đã nói: "${Whisper.text}"
-                        - Đánh giá ngữ điệu giọng nói: "${nguDieu.nhanXetNguDieu}"
+            ## THÔNG TIN ĐỀ THI
+            - Loại bài: ${loaiBai}
+            - Câu hỏi: ${CauHoi}
+            ${noiDungDoc ? `- Nội dung bài đọc: ${noiDungDoc}` : ""}
+            ${giaiThich ? `- Hướng dẫn của giáo viên: ${giaiThich}` : ""}
+            ${anh ? `- Đề có hình ảnh đính kèm: học viên cần mô tả/trả lời dựa trên hình ảnh đó` : ""}
 
-                    Dựa vào nội dung bóc băng và đánh giá ngữ điệu, hãy phân tích độ trôi chảy, ngữ pháp, từ vựng và sự liên quan đến đề thi.
-                    
-                    QUAN TRỌNG: Hãy trả về kết quả ĐÚNG theo định dạng JSON sau, không bọc markdown, không kèm chữ nào khác:
-                    {
-                        "diemUocTinh": "Số điểm từ 0-8",
-                        "loiNhanXet": "Lời nhận xét chi tiết bằng tiếng Việt để học viên có thể cải thiện (ngắn gọn nhất có thể, đúng trọng tâm),(LƯU Ý QUAN TRỌNG: Viết liền trên 1 dòng duy nhất, tuyệt đối KHÔNG sử dụng ký tự xuống dòng ở đây)"
-                    }
-                    `;
+            ## BÀI LÀM CỦA HỌC VIÊN
+            ${Whisper.text ? `- Nội dung học viên đã nói (speech-to-text): "${Whisper.text}"` : "- Nội dung: KHÔNG CÓ — học viên không nói gì"}
+            ${nguDieu.nhanXetNguDieu ? `- Đánh giá ngữ điệu (từ hệ thống phân tích giọng nói): "${nguDieu.nhanXetNguDieu}"` : "- Ngữ điệu: Không có dữ liệu"}
+
+            ## THANG ĐIỂM
+            - Thang điểm cố định: 0.0 – 8.0 (số thực, làm tròn 1 chữ số thập phân)
+            - Điểm 0.0: học viên không nói gì hoặc nội dung hoàn toàn không liên quan
+            - Điểm 8.0: hoàn toàn xuất sắc, không có lỗi đáng kể
+            - Không được trả về điểm ngoài khoảng 0.0 – 8.0
+
+            ## TIÊU CHÍ CHẤM ĐIỂM (theo thứ tự ưu tiên)
+            1. Mức độ hoàn thành yêu cầu đề bài (có trả lời đúng trọng tâm không)
+            2. Độ trôi chảy (fluency): nói tự nhiên, ít ngập ngừng, không dừng quá lâu
+            3. Ngữ pháp (grammar): độ chính xác cấu trúc câu, thì động từ
+            4. Từ vựng (vocabulary): sự phù hợp, đa dạng, chính xác với ngữ cảnh
+            5. Ngữ điệu và phát âm (pronunciation & intonation): dựa trên đánh giá từ hệ thống phân tích giọng nói
+
+            ## HƯỚNG DẪN NHẬN XÉT
+            - Viết bằng tiếng Việt, ngắn gọn, đúng trọng tâm
+            - Cấu trúc nhận xét: điểm mạnh → điểm yếu → gợi ý cải thiện cụ thể
+            - Nhận xét phải bao quát cả 5 tiêu chí, không bỏ sót tiêu chí nào
+            - Không khen chung chung, không dùng từ sáo rỗng
+            - Nếu whisper.text trống hoặc không rõ nghĩa: dựa vào ngữ điệu để chấm, ghi rõ "Không nhận diện được nội dung, chỉ đánh giá dựa trên ngữ điệu"
+            - Nếu cả hai đều trống: ghi "Học viên không thực hiện bài nói"
+            - Tuyệt đối không xuống dòng, không dùng ký tự \\n, viết thành 1 chuỗi liên tục
+
+            ## LƯU Ý ĐẶC BIỆT
+            - Whisper có thể phiên âm sai một số từ → không trừ điểm nặng nếu lỗi nhỏ có thể do nhận diện sai
+            - Ngữ điệu từ hệ thống là dữ liệu bổ trợ, không phải dữ liệu duy nhất để chấm
+            - Ưu tiên đánh giá nội dung và sự liên quan đến đề bài trước khi xét các tiêu chí phụ
+
+            ## OUTPUT
+            Trả về JSON hợp lệ duy nhất, không markdown, không giải thích thêm:
+            {
+            "diemUocTinh": <số thực 0.0–8.0, làm tròn 1 chữ số thập phân>,
+            "loiNhanXet": "<nhận xét trên 1 dòng duy nhất>"
+            }`;
                     duLieuGoiDi.push({ type: "text", text: yeuCau });
                     const apiKey = process.env.MISTRAL_API_KEY;
                     const client = new Mistral({ apiKey: apiKey });
@@ -2069,7 +2522,7 @@ app.post(`/api/chamDiemSpeaking`, async (req, res) => {
                     chuoiJsonSach = chuoiJsonSach.replace(/[\r\n\t]+/g, " ");
                     const ketQuaHoanChinh = JSON.parse(chuoiJsonSach);
 
-                    console.log("🎯 KẾT QUẢ TỪ MISTRAL:", ketQuaHoanChinh);
+                    console.log("🎯 KẾT QUẢ speaking TỪ MISTRAL:", ketQuaHoanChinh);
                     return res.status(200).json({
                         trangThai: "tc",
                         data: ketQuaHoanChinh
@@ -3007,7 +3460,7 @@ app.get('/api/lay-danh-sach-hoc-vien/:idLopHoc', xacThuc, async (req, res) => {
     try {
         const idLopHoc = req.params.idLopHoc;
         const hoadons = await HoaDon.find({ idLopHoc: idLopHoc });
-        const emails = hoadons.map(hd => hd.email);
+        const emails = hoadons.map(hd => hd.Email);
         const hocviens = await TaiKhoan.find({ Email: { $in: emails } }).select('HoTen Email');
         res.status(200).json({ trangThai: "tc", data: hocviens });
     } catch (err) {
@@ -3083,7 +3536,7 @@ app.get('/api/thong-ke-hoc-vien/:idLopHoc', xacThuc, async (req, res) => {
         
         // Lấy danh sách email học viên từ hóa đơn
         const hoadons = await HoaDon.find({ idLopHoc: idLopHoc });
-        const emails = hoadons.map(hd => hd.email);
+        const emails = hoadons.map(hd => hd.Email);
         
         // Lấy thông tin tài khoản
         const hocviens = await TaiKhoan.find({ Email: { $in: emails } }).select('HoTen Email NamSinh NgheNghiep');
@@ -3275,6 +3728,487 @@ app.get('/api/luyen-de/:id', async (req, res) => {
         }
     } catch (err) {
         console.log("Lỗi lấy luyện đề:", err);
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+// API Cập nhật Luyện Đề (tên, trạng thái)
+app.patch('/api/luyen-de/:id', xacThuc, async (req, res) => {
+    try {
+        const { tenBoDe, tenDe, trangThai } = req.body;
+        const today = new Date();
+        const ngayTao = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
+        await LuyenDe.findByIdAndUpdate(req.params.id, {
+            tenBoDe, tenDe, trangThai, ngayTao
+        });
+        res.status(200).json({ trangThai: "tc" });
+    } catch (err) {
+        console.log("Lỗi cập nhật luyện đề:", err);
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+// API Xóa toàn bộ chi tiết luyện đề theo idLuyenDe
+app.delete('/api/chi-tiet-luyen-de/:idLuyenDe', xacThuc, async (req, res) => {
+    try {
+        await ChiTietLuyenDe.deleteMany({ idLuyenDe: req.params.idLuyenDe });
+        res.status(200).json({ trangThai: "tc" });
+    } catch (err) {
+        console.log("Lỗi xóa chi tiết luyện đề:", err);
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+// API Thêm hàng loạt chi tiết luyện đề
+app.post('/api/chi-tiet-luyen-de', xacThuc, async (req, res) => {
+    try {
+        const data = req.body; // array
+        await ChiTietLuyenDe.insertMany(data);
+        res.status(201).json({ trangThai: "tc" });
+    } catch (err) {
+        console.log("Lỗi thêm chi tiết luyện đề:", err);
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+// API Xóa Luyện Đề theo id
+app.delete('/api/luyen-de/:id', xacThuc, async (req, res) => {
+    try {
+        await LuyenDe.findByIdAndDelete(req.params.id);
+        res.status(200).json({ trangThai: "tc" });
+    } catch (err) {
+        console.log("Lỗi xóa luyện đề:", err);
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+// API Lấy chi tiết luyện đề theo idLuyenDe
+app.get('/api/chi-tiet-luyen-de/:idLuyenDe', async (req, res) => {
+    try {
+        const data = await ChiTietLuyenDe.find({ idLuyenDe: req.params.idLuyenDe });
+        res.status(200).json({ trangThai: "tc", data });
+        console.log("lấy chi tiết luyện đề thành công");
+    } catch (err) {
+        console.log("Lỗi lấy chi tiết luyện đề:", err);
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+///////////////// THI THỬ ///////////////////
+// Bảng Thi Thử
+const ThiThuSchema = new mongoose.Schema({
+    
+    tenBoDe: { type: String, required: true },
+    tenDe: { type: String, required: true },
+    kyNang: { type: String, required: true },
+    ngayTao: { type: String },
+    trangThai: { type: String, default: "Bản Nháp" }
+});
+const ThiThu = mongoose.model("ThiThu", ThiThuSchema);
+
+// Bảng Chi Tiết Thi Thử
+const ChiTietThiThuSchema = new mongoose.Schema({
+    idThiThu: { type: String, required: true },
+    tenPart: { type: String },
+    email: { type: String },
+    type: { type: Number },
+    fileNghe: { type: String },
+    anh: { type: String },
+    noiDungDoc: { type: String },
+    noiDungCauHoi: [
+        {
+            soCau: { type: Number },
+            cauHoi: { type: String },
+            a: { type: String },
+            b: { type: String },
+            c: { type: String },
+            d: { type: String },
+            dapAn: { type: String },
+            giaiThich: { type: String },
+        }
+    ],
+});
+const ChiTietThiThu = mongoose.model("ChiTietThiThu", ChiTietThiThuSchema);
+
+// API Thêm Thi Thử
+app.post('/api/thi-thu', xacThuc, async (req, res) => {
+    try {
+        const {  tenBoDe, tenDe, kyNang } = req.body;
+        const today = new Date();
+        const ngayTao = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
+        
+        const newThiThu = new ThiThu({ 
+            tenBoDe, 
+            tenDe, 
+            kyNang,
+            ngayTao,
+            trangThai: "Bản Nháp"
+        });
+        
+        await newThiThu.save();
+        res.status(201).json({ trangThai: "tc", data: newThiThu });
+    } catch (err) {
+        console.log("Lỗi thêm thi thử:", err);
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+// API Lấy danh sách Thi Thử
+app.get('/api/thi-thu', async (req, res) => {
+    try {
+        const data = await ThiThu.find();
+        res.status(200).json({ trangThai: "tc", data: data });
+    } catch (err) {
+        console.log("Lỗi lấy thi thử:", err);
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+
+
+// API Lấy 1 Thi Thử theo ID
+app.get('/api/thi-thu/:id', async (req, res) => {
+    try {
+        const data = await ThiThu.findById(req.params.id);
+        if(data) {
+            res.status(200).json({ trangThai: "tc", data: data });
+        } else {
+            res.status(404).json({ trangThai: "tb" });
+        }
+    } catch (err) {
+        console.log("Lỗi lấy thi thử:", err);
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+// API Cập nhật Thi Thử
+app.patch('/api/thi-thu/:id', xacThuc, async (req, res) => {
+    try {
+        const { tenBoDe, tenDe, trangThai } = req.body;
+        const today = new Date();
+        const ngayTao = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
+        await ThiThu.findByIdAndUpdate(req.params.id, {
+            tenBoDe, tenDe, trangThai, ngayTao
+        });
+        res.status(200).json({ trangThai: "tc" });
+    } catch (err) {
+        console.log("Lỗi cập nhật thi thử:", err);
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+// API Xóa Thi Thử
+app.delete('/api/thi-thu/:id', xacThuc, async (req, res) => {
+    try {
+        await ThiThu.findByIdAndDelete(req.params.id);
+        res.status(200).json({ trangThai: "tc" });
+    } catch (err) {
+        console.log("Lỗi xóa thi thử:", err);
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+// API Chi Tiết Thi Thử - Lấy theo idThiThu
+app.get('/api/chi-tiet-thi-thu/:idThiThu', async (req, res) => {
+    try {
+        const data = await ChiTietThiThu.find({ idThiThu: req.params.idThiThu });
+        res.status(200).json({ trangThai: "tc", data });
+    } catch (err) {
+        console.log("Lỗi lấy chi tiết thi thử:", err);
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+// API Chi Tiết Thi Thử - Thêm hàng loạt
+app.post('/api/chi-tiet-thi-thu', xacThuc, async (req, res) => {
+    try {
+        const data = req.body;
+        await ChiTietThiThu.insertMany(data);
+        res.status(201).json({ trangThai: "tc" });
+        console.log("thêm chi tiết thi thử thành công");
+    } catch (err) {
+        console.log("Lỗi thêm chi tiết thi thử:", err);
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+// API Chi Tiết Thi Thử - Xóa theo idThiThu
+app.delete('/api/chi-tiet-thi-thu/:idThiThu', xacThuc, async (req, res) => {
+    try {
+        await ChiTietThiThu.deleteMany({ idThiThu: req.params.idThiThu });
+        console.log("xoa chi tiet thi thu thanh cong");
+        res.status(200).json({ trangThai: "tc" });
+    } catch (err) {
+        console.log("Lỗi xóa chi tiết thi thử:", err);
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+///////////////// KIỂM TRA ĐẦU VÀO ///////////////////
+
+// Bảng Kiểm Tra Đầu Vào
+const KiemTraDauVaoSchema = new mongoose.Schema({
+    tenKiemTraDauVao: { type: String, required: true },
+    emailNguoiTao: { type: String },
+    ngayTao: { type: String },
+    trangThai: { type: String, default: "Bản Nháp" }
+});
+const KiemTraDauVao = mongoose.model("KiemTraDauVao", KiemTraDauVaoSchema);
+
+// Bảng Chi Tiết Kiểm Tra Đầu Vào
+const ChiTietKiemTraDauVaoSchema = new mongoose.Schema({
+    idKiemTraDauVao: { type: String, required: true },
+    CauHoi: { type: String },
+    type: { type: Number }, // 0: trắc nghiệm, 1: tự luận ngắn, 2: tự luận dài, 3: ghi âm
+    a: { type: String },
+    b: { type: String },
+    c: { type: String },
+    d: { type: String },
+    fileNghe: { type: String },
+    anh: { type: String },
+    dapAn: { type: String }
+});
+const ChiTietKiemTraDauVao = mongoose.model("ChiTietKiemTraDauVao", ChiTietKiemTraDauVaoSchema);
+
+// Bảng Kiểm Tra Đầu Vào Đã Làm
+
+
+// API lấy danh sách Kiểm Tra Đầu Vào
+app.get('/api/kiem-tra-dau-vao', async (req, res) => {
+    try {
+        const data = await KiemTraDauVao.find();
+        res.status(200).json({ trangThai: "tc", data });
+    } catch (err) {
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+// api lấy random 1 dề kiểm tra đầu vào
+app.get('/api/kiem-tra-dau-vao-random', async (req, res) => {
+    try {
+        const data = await KiemTraDauVao.aggregate([{ $sample: { size: 1 } }]);
+        res.status(200).json({ trangThai: "tc", data: data });
+    } catch (err) {
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+
+// lấy chi tiết 1 bài kiểm tra đầu vào
+app.get('/api/kiem-tra-dau-vao/:id', async (req, res) => {
+    try {
+        const data = await KiemTraDauVao.findById(req.params.id);
+        res.status(200).json({ trangThai: "tc", data });
+    } catch (err) {
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+app.post('/api/kiem-tra-dau-vao', xacThuc, async (req, res) => {
+    try {
+        const { tenKiemTraDauVao } = req.body;
+        const emailNguoiTao = req.user.Email;
+        const today = new Date();
+        const ngayTao = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
+        const newKTDV = new KiemTraDauVao({ tenKiemTraDauVao, emailNguoiTao, ngayTao });
+        await newKTDV.save();
+        res.status(201).json({ trangThai: "tc", data: newKTDV });
+    } catch (err) {
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+app.patch('/api/kiem-tra-dau-vao/:id', xacThuc, async (req, res) => {
+    try {
+        const { tenKiemTraDauVao, trangThai } = req.body;
+        await KiemTraDauVao.findByIdAndUpdate(req.params.id, { tenKiemTraDauVao, trangThai });
+        res.status(200).json({ trangThai: "tc" });
+    } catch (err) {
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+app.delete('/api/kiem-tra-dau-vao/:id', xacThuc, async (req, res) => {
+    try {
+        await KiemTraDauVao.findByIdAndDelete(req.params.id);
+        await ChiTietKiemTraDauVao.deleteMany({ idKiemTraDauVao: req.params.id });
+        res.status(200).json({ trangThai: "tc" });
+    } catch (err) {
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+// API Chi Tiết Kiểm Tra Đầu Vào
+app.get('/api/chi-tiet-kiem-tra-dau-vao/:idKTDV', async (req, res) => {
+    try {
+        const data = await ChiTietKiemTraDauVao.find({ idKiemTraDauVao: req.params.idKTDV });
+        res.status(200).json({ trangThai: "tc", data });
+    } catch (err) {
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+app.post('/api/chi-tiet-kiem-tra-dau-vao', xacThuc, async (req, res) => {
+    try {
+        const data = req.body; // Array of questions
+        await ChiTietKiemTraDauVao.insertMany(data);
+        res.status(201).json({ trangThai: "tc" });
+    } catch (err) {
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+app.delete('/api/chi-tiet-kiem-tra-dau-vao/:idKTDV', xacThuc, async (req, res) => {
+    try {
+        await ChiTietKiemTraDauVao.deleteMany({ idKiemTraDauVao: req.params.idKTDV });
+        res.status(200).json({ trangThai: "tc" });
+    } catch (err) {
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+// API Kiểm Tra Đầu Vào Đã Làm
+app.get('/api/kiem-tra-dau-vao-da-lam', async (req, res) => {
+    try {
+        const data = await KiemTraDauVaoDaLam.find();
+        res.status(200).json({ trangThai: "tc", data });
+    } catch (err) {
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+app.post('/api/kiem-tra-dau-vao-da-lam', async (req, res) => {
+    try {
+        const { idKiemTraDauVao, email, diemLR, diemSW } = req.body;
+        const today = new Date();
+        const ngayNop = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
+        const newDaLam = new KiemTraDauVaoDaLam({ idKiemTraDauVao, email, diemLR, diemSW, ngayNop });
+        await newDaLam.save();
+        res.status(201).json({ trangThai: "tc" });
+    } catch (err) {
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+//////////////////////////////////////////////////////////////////
+///////////////// THI THỬ ĐÃ LÀM ///////////////////
+
+// Bảng Thi Thử Đã Làm
+const ThiThuDaLamSchema = new mongoose.Schema({
+    idThiThu: { type: String, required: true },
+    diem: { type: Number, default: 0 },
+    kyNang: { type: String },
+    email: { type: String },
+    ngayTao: { type: String },
+});
+const ThiThuDaLam = mongoose.model("ThiThuDaLam", ThiThuDaLamSchema);
+
+// Bảng Chi Tiết Thi Thử Đã Làm
+const ChiTietThiThuDaLamSchema = new mongoose.Schema({
+    idThiThu: { type: String, required: true },
+    email: { type: String },
+    tenPart: { type: String },
+    type: { type: Number },
+    fileNghe: { type: String },
+    anh: { type: String },
+    noiDungDoc: { type: String },
+    noiDungCauHoi: [
+        {
+            soCau: { type: Number },
+            cauHoi: { type: String },
+            a: { type: String },
+            b: { type: String },
+            c: { type: String },
+            d: { type: String },
+            dapAn: { type: String },
+            giaiThich: { type: String },
+            loiPheAI: { type: String, default: "" },
+        }
+    ],
+});
+const ChiTietThiThuDaLam = mongoose.model("ChiTietThiThuDaLam", ChiTietThiThuDaLamSchema);
+
+// API: Lấy danh sách Thi Thử Đã Làm
+app.get('/api/thi-thu-da-lam', async (req, res) => {
+    try {
+        const { email, idThiThu } = req.query;
+        const query = {};
+        if (email) query.email = email;
+        if (idThiThu) query.idThiThu = idThiThu;
+        const data = await ThiThuDaLam.find(query);
+        res.status(200).json({ trangThai: "tc", data });
+    } catch (err) {
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+// API: Thêm Thi Thử Đã Làm
+app.post('/api/thi-thu-da-lam', async (req, res) => {
+    try {
+        const { idThiThu, diem, kyNang, email } = req.body;
+        const today = new Date();
+        const ngayTao = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
+        // Clean up previous attempts for the same exam by this user
+        await ThiThuDaLam.deleteMany({ idThiThu, email });
+        const newEntry = new ThiThuDaLam({ idThiThu, diem, kyNang, email, ngayTao });
+        await newEntry.save();
+        res.status(201).json({ trangThai: "tc" });
+    } catch (err) {
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+// API: Lấy Chi Tiết Thi Thử Đã Làm theo email + idThiThu
+app.get('/api/chi-tiet-thi-thu-da-lam', async (req, res) => {
+    try {
+        const { email, idThiThu } = req.query;
+        const query = {};
+        if (email) query.email = email;
+        if (idThiThu) query.idThiThu = idThiThu;
+        const data = await ChiTietThiThuDaLam.find(query);
+        res.status(200).json({ trangThai: "tc", data });
+    } catch (err) {
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+// API: Thêm Chi Tiết Thi Thử Đã Làm (array)
+app.post('/api/chi-tiet-thi-thu-da-lam', async (req, res) => {
+    try {
+        const data = req.body;
+        if (Array.isArray(data) && data.length > 0) {
+            const firstItem = data[0];
+            if (firstItem && firstItem.idThiThu && firstItem.email) {
+                await ChiTietThiThuDaLam.deleteMany({
+                    idThiThu: firstItem.idThiThu,
+                    email: firstItem.email
+                });
+            }
+        }
+        await ChiTietThiThuDaLam.insertMany(data);
+        res.status(201).json({ trangThai: "tc" });
+    } catch (err) {
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+// API: Xóa Thi Thử Đã Làm theo email + idThiThu
+app.delete('/api/thi-thu-da-lam', async (req, res) => {
+    try {
+        const { email, idThiThu } = req.query;
+        await ThiThuDaLam.deleteMany({ email, idThiThu });
+        res.status(200).json({ trangThai: "tc" });
+    } catch (err) {
+        res.status(500).json({ trangThai: "tb" });
+    }
+});
+
+// API: Xóa Chi Tiết Thi Thử Đã Làm theo email + idThiThu
+app.delete('/api/chi-tiet-thi-thu-da-lam', async (req, res) => {
+    try {
+        const { email, idThiThu } = req.query;
+        await ChiTietThiThuDaLam.deleteMany({ email, idThiThu });
+        res.status(200).json({ trangThai: "tc" });
+    } catch (err) {
         res.status(500).json({ trangThai: "tb" });
     }
 });

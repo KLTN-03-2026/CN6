@@ -35,6 +35,10 @@ export default function ThemChinhSuaKH() {
   const InputPhuongPhap = useRef<HTMLTextAreaElement>(null);
   const InputKetQua = useRef<HTMLTextAreaElement>(null);
   const [trangThai, setTrangThai] = useState("Đang Hoạt Động");
+  const [kyNang, setKyNang] = useState("LR");
+  const [drSkill, setDrSkill] = useState(false);
+  const InputDauRaLR = useRef<HTMLInputElement>(null);
+  const InputDauRaSW = useRef<HTMLInputElement>(null);
 
   const ChuyenTrang = useNavigate();
 
@@ -59,6 +63,9 @@ export default function ThemChinhSuaKH() {
         setData(req.dulieu);
         setAnh(req.dulieu.Image);
         setTrangThai(req.dulieu.trangThai);
+        if (req.dulieu.kyNang) {
+          setKyNang(req.dulieu.kyNang);
+        }
       } else if (req.trangThai === "hh") {
         settb(true);
         settypeTB("w"); // w , err
@@ -71,7 +78,16 @@ export default function ThemChinhSuaKH() {
 
   const luu = async () => {
     const TenKhoaHoc = InputTenKhoaHoc.current?.value.trim() || "";
-    const DauRa = InputDauRa.current?.value.trim() || "";
+    let DauRa = "";
+    if (kyNang === "4KN") {
+      const lr = InputDauRaLR.current?.value.trim() || "";
+      const sw = InputDauRaSW.current?.value.trim() || "";
+      if (lr && sw) {
+        DauRa = String(`${lr}-${sw}`);
+      }
+    } else {
+      DauRa = String(InputDauRa.current?.value.trim() || "");
+    }
     const MoTa = InputMoTa.current?.value.trim() || "";
     const PhuHop = InputPhuHop.current?.value.trim() || "";
     const Gia = InputGia.current?.value.trim() || "";
@@ -100,6 +116,7 @@ export default function ThemChinhSuaKH() {
         PhuongPhap: PhuongPhap,
         KetQua: KetQua,
         trangThai: trangThai,
+        kyNang: kyNang,
       };
       if (id !== "them") {
         ///// cập nhật khóa học
@@ -280,17 +297,69 @@ export default function ThemChinhSuaKH() {
         {/* điều khiển sửa xóa */}
         <div className="flex justify-center m-[20px] sticky top-[70px] z-[2]">
           <div className=" w-fit flex gap-2  bg-white border border-black/20 rounded-[10px] p-[10px] shadow-[0_5px_15px_rgb(18,19,20,0.15)]">
-            {dr && (
+            {(dr || drSkill) && (
               <div
                 onClick={() => {
                   setdr(false);
+                  setDrSkill(false);
                 }}
                 className="w-full h-full  absolute top-0 right-0"
               ></div>
             )}
+
             <div
               onClick={() => {
-                setdr(true);
+                setDrSkill(!drSkill);
+                setdr(false);
+              }}
+              className="transition-all duration-300 relative w-[230px] flex justify-between cursor-pointer gap-2 items-center p-[10px] rounded-[10px] text-white font-bold bg-[#114a53]"
+            >
+              <p>{kyNang === "LR" ? "Listening & Reading" : kyNang === "SW" ? "Speaking & Writing" : "4 Kỹ năng"}</p>
+              <img
+                className={`h-[20px] transition-all duration-300 ${drSkill ? "rotate-0" : "rotate-[90deg]"}`}
+                src="https://img.icons8.com/?size=100&id=87356&format=png&color=ffffff"
+                alt=""
+              />
+              {drSkill && (
+                <div className="left-0 w-full py-[10px] absolute top-[45px] bg-white border border-black/20 rounded-[10px] text-black font-normal z-[5]">
+                  <p
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setKyNang("LR");
+                      setDrSkill(false);
+                    }}
+                    className="px-[10px] py-[5px] transition-all duration-300 hover:bg-[#c3d2d4]"
+                  >
+                    Listening & Reading
+                  </p>
+                  <p
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setKyNang("SW");
+                      setDrSkill(false);
+                    }}
+                    className="px-[10px] py-[5px] transition-all duration-300 hover:bg-[#c3d2d4]"
+                  >
+                    Speaking & Writing
+                  </p>
+                  <p
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setKyNang("4KN");
+                      setDrSkill(false);
+                    }}
+                    className="px-[10px] py-[5px] transition-all duration-300 hover:bg-[#c3d2d4]"
+                  >
+                    4 Kỹ năng
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div
+              onClick={() => {
+                setdr(!dr);
+                setDrSkill(false);
               }}
               className={`transition-all duration-300 relative w-[200px] flex justify-between cursor-pointer  gap-2  items-center p-[10px]  rounded-[10px] text-white font-bold ${trangThai === "Đang Hoạt Động" ? "bg-[#018531]" : `bg-[#e03d3a]`}`}
             >
@@ -301,7 +370,7 @@ export default function ThemChinhSuaKH() {
                 alt=""
               />
               {dr && (
-                <div className="left-0 w-full py-[10px] absolute top-[45px] bg-white border border-black/20 rounded-[10px] text-black font-normal ">
+                <div className="left-0 w-full py-[10px] absolute top-[45px] bg-white border border-black/20 rounded-[10px] text-black font-normal z-[5]">
                   <p
                     onClick={(e) => {
                       e.stopPropagation();
@@ -353,14 +422,33 @@ export default function ThemChinhSuaKH() {
               className="p-[10px] caret-black focus:outline-none border border-black/20 rounded-[10px] w-full font-extrabold text-[40px] bg-gradient-to-b from-[#287678] to-[#4ADADE] bg-clip-text text-transparent"
             />
 
-            <div className="text-[20px] text-[#2A6770] px-[15px] py-[10px] bg-[rgba(175,208,217,0.5)] w-fit rounded-[10px]">
+            <div className="text-[20px] text-[#2A6770] px-[15px] py-[10px] bg-[rgba(175,208,217,0.5)] w-fit rounded-[10px] flex items-center gap-2">
               Đầu ra :{" "}
-              <input
-                ref={InputDauRa}
-                type="text"
-                defaultValue={`${Data?.DauRa || ""}`}
-                className="font-bold focus:outline-none w-fit text-[#0D2A2E] border border-black/20 rounded-[10px] p-[10px]"
-              />{" "}
+              {kyNang === "4KN" ? (
+                <div className="flex gap-2 items-center">
+                  LR{" "}
+                  <input
+                    ref={InputDauRaLR}
+                    type="number"
+                    defaultValue={Data?.DauRa && String(Data.DauRa).includes("-") ? Number(String(Data.DauRa).split("-")[0].replace(/[^0-9.]/g, '')) : ""}
+                    className="font-bold focus:outline-none w-[80px] text-[#0D2A2E] border border-black/20 rounded-[10px] p-[10px]"
+                  />{" "}
+                  - SW{" "}
+                  <input
+                    ref={InputDauRaSW}
+                    type="number"
+                    defaultValue={Data?.DauRa && String(Data.DauRa).includes("-") ? Number(String(Data.DauRa).split("-")[1].replace(/[^0-9.]/g, '')) : ""}
+                    className="font-bold focus:outline-none w-[80px] text-[#0D2A2E] border border-black/20 rounded-[10px] p-[10px]"
+                  />
+                </div>
+              ) : (
+                <input
+                  ref={InputDauRa}
+                  type="number"
+                  defaultValue={Data?.DauRa ? Number(String(Data.DauRa).replace(/[^0-9.]/g, '')) : ""}
+                  className="font-bold focus:outline-none w-[100px] text-[#0D2A2E] border border-black/20 rounded-[10px] p-[10px]"
+                />
+              )}
             </div>
             <textarea
               ref={InputMoTa}

@@ -8,10 +8,11 @@ import { BACKEND_URL } from "../FileThongso";
 
 interface HeaderProps {
   type: string;
-  nopbai: () => void;
+  nopbai?: () => void;
+  timer?: number;
 }
 
-export default function Header({ type, nopbai }: HeaderProps) {
+export default function Header({ type, nopbai, timer }: HeaderProps) {
   const ChuyenTrang = useNavigate();
   const [DN, setDN] = useState(false);
   const [drKh, setdrKh] = useState(false);
@@ -147,19 +148,19 @@ export default function Header({ type, nopbai }: HeaderProps) {
               )}
               <Link
                 className="transition-all  hover:border-b border-b-[#13474b] font-medium"
-                to={`#`}
+                to={`/HV_kiemTraDauVao`}
               >
                 kiểm tra đầu vào
               </Link>
               <Link
                 className="transition-all  hover:border-b border-b-[#13474b] font-medium"
-                to={`#`}
+                to={`/HV_luyenDe`}
               >
                 luyện đề
               </Link>
               <Link
                 className="transition-all  hover:border-b border-b-[#13474b] font-medium"
-                to={`#`}
+                to={`/HV_ThiThu`}
               >
                 Thi Thử
               </Link>
@@ -176,6 +177,8 @@ export default function Header({ type, nopbai }: HeaderProps) {
                       ChuyenTrang("/HocVien/QlHocTap");
                     } else if (VaiTro === "admin") {
                       ChuyenTrang("/admin/QL");
+                    } else if (VaiTro === "Giảng Viên") {
+                      ChuyenTrang("/giangVien/QL");
                     } else {
                       settb(true);
                       settypeTB("w");
@@ -233,7 +236,13 @@ export default function Header({ type, nopbai }: HeaderProps) {
         >
           <div
             onClick={() => {
-              ChuyenTrang(-1);
+              if (
+                window.confirm(
+                  "Nếu bạn rời khỏi trang hoặc tải lại trang, mọi đáp án đã làm sẽ bị mất! Bạn có chắc chắn muốn thoát không?",
+                )
+              ) {
+                ChuyenTrang(-1);
+              }
             }}
             className=" cursor-pointer top-[-60px] right-[50px] items-center gap-1 text-[#114a53] font-medium text-[18px] flex px-[10px] py-[8px] bg-[#e1eef1] rounded-[10px]"
           >
@@ -253,14 +262,24 @@ export default function Header({ type, nopbai }: HeaderProps) {
             alt="logo"
             className="h-[33px] cursor-pointer"
           />
-          <button
-            onClick={() => {
-              nopbai();
-            }}
-            className={`px-[15px] py-[10px] bg-[#0d2a2e] rounded-[10px] text-white font-bold transition-all duration-300 hover:scale-[1.05]`}
-          >
-            Nộp Bài
-          </button>
+          <div className="flex gap-4 items-center">
+            {timer !== undefined && (
+              <p className="font-bold text-[#c23935] bg-[#fee4e3] text-[18px] px-[20px] py-[9px] rounded-[10px] ">
+                {Math.floor(timer / 60)
+                  .toString()
+                  .padStart(2, "0")}
+                :{(timer % 60).toString().padStart(2, "0")}
+              </p>
+            )}
+            <button
+              onClick={() => {
+                if (nopbai) nopbai();
+              }}
+              className={`px-[15px] py-[10px] bg-[#0d2a2e] rounded-[10px] text-white font-bold transition-all duration-300 hover:scale-[1.05]`}
+            >
+              Nộp Bài
+            </button>
+          </div>
         </div>
       )}
 

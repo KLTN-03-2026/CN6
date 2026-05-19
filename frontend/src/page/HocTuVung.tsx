@@ -1,15 +1,18 @@
 import { useNavigate, useParams } from "react-router-dom";
 import Header from "./componan/header";
 import React, { useEffect, useState } from "react";
-import { p } from "framer-motion/client";
 
 export default function HocTuVung() {
   const { id } = useParams();
   const [tenTV, settenTV] = useState("");
-  const [TuVung, setTuVUng] = useState<string[]>([]);
-  const [TuVungTron, setTuVUngTron] = useState<string[]>([]);
+  
+  // Quản lý từ vựng
+  const [TuVungGoc, setTuVungGoc] = useState<string[]>([]);
+  const [TuVungHienTai, setTuVungHienTai] = useState<string[]>([]);
   const [TuVungHocLai, setTuVUngHocLai] = useState<string[]>([]);
-  const [ViTriTu, setViTriTu] = useState(1);
+  
+  // Trạng thái điều khiển
+  const [ViTriTu, setViTriTu] = useState(0);
   const [Animation, setAnimatio] = useState(0);
   const [TextAnimation, setTextAnimation] = useState("");
   const [xoay, setxoay] = useState(false);
@@ -17,10 +20,19 @@ export default function HocTuVung() {
   const [TiengViet, setTiengViet] = useState("");
   const [idlophoc, setidlophoc] = useState("");
   const [Tron, setTron] = useState(false);
-
   const [TuDongDoc, setTuDongDoc] = useState(false);
 
   const ChuyenTrang = useNavigate();
+
+  // Hàm trộn từ vựng ngẫu nhiên (Fisher-Yates)
+  const shuffleArray = (array: string[]) => {
+    const arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
 
   const layTuVung = async () => {
     try {
@@ -31,74 +43,84 @@ export default function HocTuVung() {
       if (req.trangThai === "tc") {
         setidlophoc(req.data.idLopHoc);
         settenTV(req.data.TenTuVung);
-        setTuVUng(req.data.tuVung.split("\n"));
+        const list = req.data.tuVung.split("\n").filter((item: string) => item.trim() !== "");
+        setTuVungGoc(list);
+        setTuVungHienTai(list);
         setViTriTu(0);
-        // const tu1 = req.data.tuVung.split("\n");
-        // const tu = tu1[0].split(":");
-        // if (tu) {
-        //   setTiengAnh(tu[0]);
-        //   setTiengViet(tu[1]);
-        // }
+        setTron(false);
       }
     } catch (err) {
-      console.log("lay từ vựng thất bại :" + err);
+      console.log("lay từ vựng thất bại :", err);
     }
   };
 
   const AnimationChuThuoc = () => {
+    if (ViTriTu >= TuVungHienTai.length) return;
+
     setTextAnimation("Chưa Thuộc");
-    setViTriTu(ViTriTu + 1);
     setAnimatio(1);
-    setTuVUngHocLai((prev) => [...prev, TuVung[ViTriTu]]);
+    
+    // Lưu từ vựng hiện tại đang hiển thị vào mảng học lại
+    const tuHienTai = TuVungHienTai[ViTriTu];
+    setTuVUngHocLai((prev) => {
+      if (prev.includes(tuHienTai)) return prev;
+      return [...prev, tuHienTai];
+    });
+
     setTimeout(() => {
       setAnimatio(2);
     }, 300);
     setTimeout(() => {
       setAnimatio(0);
+      setViTriTu((prev) => prev + 1);
     }, 600);
   };
 
   const AnimationDaThuoc = () => {
+    if (ViTriTu >= TuVungHienTai.length) return;
+
     setTextAnimation("Đã Thuộc");
-    setViTriTu(ViTriTu + 1);
     setAnimatio(3);
+    
     setTimeout(() => {
       setAnimatio(4);
     }, 300);
     setTimeout(() => {
       setAnimatio(0);
+      setViTriTu((prev) => prev + 1);
     }, 600);
   };
 
   const HocLai = () => {
-    setTuVUng(TuVungHocLai);
+    const danhSachMoi = [...TuVungHocLai];
+    setTuVungGoc(danhSachMoi);
     setTuVUngHocLai([]);
-    setTron(false);
-
     setViTriTu(0);
+    setxoay(false);
+    
+    if (Tron) {
+      setTuVungHienTai(shuffleArray(danhSachMoi));
+    } else {
+      setTuVungHienTai(danhSachMoi);
+    }
   };
 
   const clickTron = () => {
-    setTron(!Tron);
-    console.log(Tron);
-    if (Tron) {
-      const tu = TuVung[ViTriTu]?.split(":");
-      if (tu) {
-        setTiengAnh(tu[0]);
-        setTiengViet(tu[1]);
-      }
+    const nextTron = !Tron;
+    setTron(nextTron);
+    setViTriTu(0);
+    setxoay(false);
+    
+    if (nextTron) {
+      setTuVungHienTai(shuffleArray(TuVungGoc));
     } else {
-      const tu = TuVungTron[ViTriTu]?.split(":");
-      if (tu) {
-        setTiengAnh(tu[0]);
-        setTiengViet(tu[1]);
-      }
+      setTuVungHienTai(TuVungGoc);
     }
   };
 
   const PhatAm = (text: string) => {
-    if (!("SpeechSynthesis" in window)) {
-      alert("trinh duyet cua ban khong ho tro doc");
+    if (!("speechSynthesis" in window)) {
+      alert("Trình duyệt của bạn không hỗ trợ phát âm!");
       return;
     }
     window.speechSynthesis.cancel();
@@ -110,99 +132,75 @@ export default function HocTuVung() {
     window.speechSynthesis.speak(tucandoc);
   };
 
+  // Tự động phát âm khi lật mặt tiếng Anh
   useEffect(() => {
-    if (TuDongDoc) {
-      if (!xoay) {
-        setTimeout(() => {
-          PhatAm(TiengAnh);
-        }, 300);
-      }
+    if (TuDongDoc && !xoay && TiengAnh) {
+      const timer = setTimeout(() => {
+        PhatAm(TiengAnh);
+      }, 300);
+      return () => clearTimeout(timer);
     }
-  }, [xoay]);
+  }, [xoay, TiengAnh, TuDongDoc]);
 
+  // Lắng nghe phím bàn phím
   useEffect(() => {
     const ChuyenTuBP = (e: KeyboardEvent) => {
-      e.preventDefault();
-
       if (e.key === "ArrowRight") {
+        e.preventDefault();
         AnimationDaThuoc();
-        setViTriTu(ViTriTu + 1);
       } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
         AnimationChuThuoc();
-        setViTriTu(ViTriTu + 1);
       } else if (e.key === " ") {
-        setxoay(!xoay);
+        e.preventDefault();
+        setxoay((prev) => !prev);
       }
     };
 
     window.addEventListener("keydown", ChuyenTuBP);
-
     return () => {
       window.removeEventListener("keydown", ChuyenTuBP);
     };
-  });
+  }, [ViTriTu, TuVungHienTai]);
 
   useEffect(() => {
     layTuVung();
   }, []);
 
+  // Cập nhật nội dung thẻ khi chỉ mục từ vựng thay đổi
   useEffect(() => {
-    if (!Tron) {
-      const tu = TuVung[ViTriTu]?.split(":");
-      if (tu) {
-        setTiengAnh(tu[0]);
-        setTiengViet(tu[1]);
-        if (TuDongDoc) {
-          if (!xoay) {
-            setTimeout(() => {
-              PhatAm(tu[0]);
-            }, 300);
-          }
-        }
-      }
-    } else {
-      const tu = TuVungTron[ViTriTu]?.split(":");
-      if (tu) {
-        setTiengAnh(tu[0]);
-        setTiengViet(tu[1]);
-        if (TuDongDoc) {
-          if (!xoay) {
-            setTimeout(() => {
-              PhatAm(tu[0]);
-            }, 300);
-          }
+    const word = TuVungHienTai[ViTriTu];
+    if (word) {
+      const tu = word.split(":");
+      if (tu && tu.length >= 2) {
+        setTiengAnh(tu[0].trim());
+        setTiengViet(tu[1].trim());
+        
+        if (TuDongDoc && !xoay) {
+          const timer = setTimeout(() => {
+            PhatAm(tu[0].trim());
+          }, 300);
+          return () => clearTimeout(timer);
         }
       }
     }
-
     setxoay(false);
-  }, [ViTriTu]);
-
-  useEffect(() => {
-    const TuVungTR = [...TuVung];
-
-    for (let i = TuVungTR.length - 1; i > 0; i--) {
-      let j = Math.floor(Math.random() * (i + 1));
-      [TuVungTR[i], TuVungTR[j]] = [TuVungTR[j], TuVungTR[i]];
-    }
-    setTuVUngTron([...TuVungTR]);
-    console.log(TuVungTR);
-    console.log(TuVung);
-  }, [TuVung]);
+  }, [ViTriTu, TuVungHienTai]);
 
   return (
     <>
       <Header type="kthem" />
-      {/* //////// phần học từ vựng ///////////////// */}
-      {ViTriTu < TuVung.length ? (
-        <section className=" [perspective:1000px] flex-col gap-5   relative flex justify-center items-center mx-[10px]  h-[calc(100vh-85px)] rounded-[20px] bg-gradient-to-t from-[#A9F9FC] to-[#2F8C8F]">
-          {/* //// phần  số từ vựng trên header /////// */}
-          <div className="absolute  top-[-60px] flex flex-col items-center justify-between ">
+      
+      {ViTriTu < TuVungHienTai.length ? (
+        <section className=" [perspective:1000px] flex-col gap-5 relative flex justify-center items-center mx-[10px] h-[calc(100vh-85px)] rounded-[20px] bg-gradient-to-t from-[#A9F9FC] to-[#2F8C8F]">
+          {/* Header chỉ mục */}
+          <div className="absolute top-[-60px] flex flex-col items-center justify-between ">
             <p className="font-bold text-[18px]">{tenTV}</p>
-            <p>
-              {ViTriTu + 1}/{TuVung.length}
+            <p className="font-medium text-black/60">
+              {ViTriTu + 1}/{TuVungHienTai.length}
             </p>
           </div>
+          
           <div
             onClick={() => {
               ChuyenTrang(-1);
@@ -217,70 +215,67 @@ export default function HocTuVung() {
             <p>Thoát</p>
           </div>
 
-          {/* ////////// phần thẻ từ vựng //////////////////// */}
+          {/* Thẻ học từ vựng */}
           <div
-            className={`[transform-style:preserve-3d]  transition-all duration-700 relative flex-col w-[700px] h-[400px] rounded-[20px] flex items-center justify-center text-[30px]
-            ${xoay && `[transform:rotateX(180deg)]`}
+            className={`[transform-style:preserve-3d] transition-all duration-700 relative flex-col w-[700px] h-[400px] rounded-[20px] flex items-center justify-center text-[30px]
+            ${xoay ? `[transform:rotateX(180deg)]` : ""}
           `}
           >
-            <div className="[backface-visibility:hidden] overflow-hidden flex-col absolute w-full h-full bg-white flex justify-center items-center rounded-[10px]">
-              {TiengAnh}
+            {/* Mặt tiếng Anh */}
+            <div className="[backface-visibility:hidden] overflow-hidden flex-col absolute w-full h-full bg-white flex justify-center items-center rounded-[10px] shadow-lg">
+              <span className="font-bold text-[#114a53]">{TiengAnh}</span>
               {ViTriTu === 0 && (
                 <p className="w-full text-white font-medium h-[50px] bg-[#13474b] absolute bottom-0 flex justify-center text-[15px] items-center">
-                  Nhấn{" "}
+                  Nhấn
                   <span className="px-[10px] py-[5px] text-[#13474b] mx-[5px] bg-[#d8f8ff] rounded-[5px] drop-shadow-[3px_3px_2px_rgb(0,0,0)]">
-                    {" "}
-                    phím cách{" "}
-                  </span>{" "}
+                    phím cách
+                  </span>
                   hoặc nhấp vào thẻ để lật
                 </p>
               )}
             </div>
-            <div className="[backface-visibility:hidden] overflow-hidden absolute [transform:rotateY(180deg)] w-full h-full bg-white flex justify-center items-center rounded-[10px]">
-              <p className="[transform:rotate(180deg)]">{TiengViet}</p>
+            
+            {/* Mặt tiếng Việt */}
+            <div className="[backface-visibility:hidden] overflow-hidden absolute [transform:rotateY(180deg)] w-full h-full bg-white flex justify-center items-center rounded-[10px] shadow-lg">
+              <p className="[transform:rotate(180deg)] font-semibold text-[#13474b]">{TiengViet}</p>
               {ViTriTu === 0 && (
-                <p className="[transform:rotate(180deg)]  w-full text-white font-medium h-[50px] bg-[#13474b] absolute top-0 flex justify-center text-[15px] items-center">
+                <p className="[transform:rotate(180deg)] w-full text-white font-medium h-[50px] bg-[#13474b] absolute top-0 flex justify-center text-[15px] items-center">
                   Nhấn
                   <span className="px-[10px] py-[5px] text-[#13474b] mx-[5px] bg-[#d8f8ff] rounded-[5px] drop-shadow-[3px_3px_2px_rgb(0,0,0)]">
-                    {" "}
-                    ←{" "}
-                  </span>{" "}
+                    ←
+                  </span>
                   để học lại hoặc
-                  <span className="px-[10px] py-[5px]  text-[#13474b] mx-[5px] bg-[#d8f8ff] rounded-[5px] drop-shadow-[3px_3px_2px_rgb(0,0,0)]">
-                    {" "}
-                    →{" "}
-                  </span>{" "}
-                  nếu bạn biết câu trả lời{" "}
+                  <span className="px-[10px] py-[5px] text-[#13474b] mx-[5px] bg-[#d8f8ff] rounded-[5px] drop-shadow-[3px_3px_2px_rgb(0,0,0)]">
+                    →
+                  </span>
+                  nếu bạn biết câu trả lời
                 </p>
               )}
             </div>
           </div>
 
-          {/* ////////////// phần animatio thuộc và chưa thuộc /////////////// */}
+          {/* Phần animation thuộc và chưa thuộc */}
           <div
             onClick={() => {
               setxoay(!xoay);
             }}
-            className={`absolute translate-y-[-30px] flex-col w-[700px] h-[400px] bg-white rounded-[20px] flex items-center justify-center text-[30px] transition-all duration-300 
-            
-            
-              ${Animation === 0 && `opacity-0`}
-            ${Animation === 1 && `font-bold scale-[1.08] border-[3px] border-[#ff0000] text-[#ff0000] rotate-[-3deg] `}
-            ${Animation === 2 && `font-bold  scale-[1.08] border-[3px] border-[#ff0000] text-[#ff0000] rotate-[-3deg] translate-x-[-300px] opacity-[0]`}
-            ${Animation === 3 && `font-bold  scale-[1.08] border-[3px] border-[#539d40] text-[#539d40] rotate-[3deg] `}
-            ${Animation === 4 && `font-bold  scale-[1.08] border-[3px] border-[#539d40] text-[#539d40] rotate-[3deg] translate-x-[300px] opacity-[0]`}
+            className={`absolute translate-y-[-30px] flex-col w-[700px] h-[400px] bg-white rounded-[20px] flex items-center justify-center text-[30px] transition-all duration-300 pointer-events-none z-10
+              ${Animation === 0 ? "opacity-0" : ""}
+              ${Animation === 1 ? "font-bold scale-[1.08] border-[3px] border-[#ff0000] text-[#ff0000] rotate-[-3deg]" : ""}
+              ${Animation === 2 ? "font-bold scale-[1.08] border-[3px] border-[#ff0000] text-[#ff0000] rotate-[-3deg] translate-x-[-300px] opacity-0" : ""}
+              ${Animation === 3 ? "font-bold scale-[1.08] border-[3px] border-[#539d40] text-[#539d40] rotate-[3deg]" : ""}
+              ${Animation === 4 ? "font-bold scale-[1.08] border-[3px] border-[#539d40] text-[#539d40] rotate-[3deg] translate-x-[300px] opacity-0" : ""}
             `}
           >
-            <p className={`${xoay && `[transform:rotateX(-180deg)]`} `}>
+            <p className="">
               {TextAnimation}
             </p>
           </div>
 
-          {/* ////////////// phần nút nhất phía ở dưới /////////////// */}
-
-          <div className="flex items-center  w-[700px] justify-between gap-5 px-[10px]">
-            {/* nut tro ve 1 tu */}
+          {/* Điều khiển dưới thẻ */}
+          <div className="flex items-center w-[700px] justify-between gap-5 px-[10px]">
             <div className="flex gap-4">
+              {/* Nút trở về 1 từ */}
               <div
                 onClick={() => {
                   if (ViTriTu > 0) {
@@ -290,7 +285,7 @@ export default function HocTuVung() {
                     setTuVUngHocLai(xoa);
                   }
                 }}
-                className="cursor-pointer w-[40px] h-[40px] rounded-[50%]  flex items-center justify-center transition-all duration-300 bg-blend-normal hover:bg-[#d8f8ff]/50"
+                className="cursor-pointer w-[40px] h-[40px] rounded-[50%] flex items-center justify-center transition-all duration-300 bg-blend-normal hover:bg-[#d8f8ff]/50"
               >
                 <img
                   className="w-[50%]"
@@ -299,12 +294,12 @@ export default function HocTuVung() {
                 />
               </div>
 
-              {/* nut doc phat am */}
+              {/* Nút phát âm */}
               <div
                 onClick={() => {
                   PhatAm(TiengAnh);
                 }}
-                className="cursor-pointer w-[40px] h-[40px] rounded-[50%]  flex items-center justify-center  transition-all duration-300 bg-blend-normal hover:bg-[#d8f8ff]/50"
+                className="cursor-pointer w-[40px] h-[40px] rounded-[50%] flex items-center justify-center transition-all duration-300 bg-blend-normal hover:bg-[#d8f8ff]/50"
               >
                 <img
                   className="w-[50%]"
@@ -315,43 +310,42 @@ export default function HocTuVung() {
             </div>
 
             <div className="flex gap-5">
-              {/* nut chua thuoc */}
+              {/* Nút Chưa Thuộc */}
               <button
                 onClick={() => {
-                  setViTriTu(ViTriTu + 1);
-
                   AnimationChuThuoc();
                 }}
-                className="px-[30px] py-[10px] rounded-[15px] bg-white"
+                className="px-[30px] py-[10px] rounded-[15px] bg-white shadow-sm hover:shadow-md hover:bg-red-50/20 active:scale-95 transition-all"
               >
                 <img
                   className="w-[30px]"
                   src="https://img.icons8.com/?size=100&id=79023&format=png&color=FF0000"
-                  alt="anh chưa thuộc"
+                  alt="Chưa thuộc"
                 />
               </button>
-              {/* nut da thuoc */}
+              
+              {/* Nút Đã Thuộc */}
               <button
                 onClick={() => {
-                  setViTriTu(ViTriTu + 1);
                   AnimationDaThuoc();
                 }}
-                className="px-[30px] py-[10px] rounded-[15px] bg-white"
+                className="px-[30px] py-[10px] rounded-[15px] bg-white shadow-sm hover:shadow-md hover:bg-green-50/20 active:scale-95 transition-all"
               >
                 <img
                   className="w-[30px]"
                   src="https://img.icons8.com/?size=100&id=OyGfrOzh4XAT&format=png&color=539D40"
-                  alt="anh đã thuộc"
+                  alt="Đã thuộc"
                 />
               </button>
             </div>
+            
             <div className="flex gap-4">
-              {/* nut set tu dong doc */}
+              {/* Tự động phát âm */}
               <div
                 onClick={() => {
                   setTuDongDoc(!TuDongDoc);
                 }}
-                className={`cursor-pointer w-[40px] h-[40px] rounded-[50%] border  flex items-center justify-center transition duration-300 ${TuDongDoc ? `bg-blend-normal bg-[#d8f8ff]/50 border-[#d8f8ff] ` : `border-[#13474b]/20 `}`}
+                className={`cursor-pointer w-[40px] h-[40px] rounded-[50%] border flex items-center justify-center transition duration-300 ${TuDongDoc ? "bg-blend-normal bg-[#d8f8ff]/50 border-[#d8f8ff]" : "border-[#13474b]/20"}`}
               >
                 <img
                   className="w-[50%]"
@@ -359,12 +353,13 @@ export default function HocTuVung() {
                   alt=""
                 />
               </div>
-              {/* nut tron tu vung */}
+              
+              {/* Trộn từ vựng */}
               <div
                 onClick={() => {
                   clickTron();
                 }}
-                className={`cursor-pointer w-[40px] h-[40px] rounded-[50%] border  flex items-center justify-center transition duration-300 ${Tron ? `bg-blend-normal bg-[#d8f8ff]/50 border-[#d8f8ff] ` : `border-[#13474b]/20 `}`}
+                className={`cursor-pointer w-[40px] h-[40px] rounded-[50%] border flex items-center justify-center transition duration-300 ${Tron ? "bg-blend-normal bg-[#d8f8ff]/50 border-[#d8f8ff]" : "border-[#13474b]/20"}`}
               >
                 <img
                   className="w-[70%]"
@@ -376,10 +371,10 @@ export default function HocTuVung() {
           </div>
         </section>
       ) : (
-        <section className=" [perspective:1000px] flex-col gap-5   relative flex justify-center items-center mx-[10px]  h-[calc(100vh-85px)] rounded-[20px] bg-gradient-to-t from-[#A9F9FC] to-[#2F8C8F]">
-          {/* ///////// phần khi hét từ vựng ///////////// */}
-          <div className="w-[700px]  p-[80px] bg-white rounded-[20px] gap-3 flex flex-col justify-center items-center">
-            <div className="w-[100px] h-[100px] rounded-[50%] bg-[#d8f8ff]  flex items-center justify-center">
+        <section className=" [perspective:1000px] flex-col gap-5 relative flex justify-center items-center mx-[10px] h-[calc(100vh-85px)] rounded-[20px] bg-gradient-to-t from-[#A9F9FC] to-[#2F8C8F]">
+          {/* Màn hình hoàn thành */}
+          <div className="w-[700px] p-[80px] bg-white rounded-[20px] gap-3 flex flex-col justify-center items-center shadow-2xl">
+            <div className="w-[100px] h-[100px] rounded-[50%] bg-[#d8f8ff] flex items-center justify-center">
               <img
                 className="w-[65%]"
                 src="https://img.icons8.com/?size=100&id=2koI9uU0dBK7&format=png&color=13474b"
@@ -389,32 +384,33 @@ export default function HocTuVung() {
             <p className="font-extrabold text-[25px] text-[#13474b]">
               HOÀN THÀNH
             </p>
-            <p>bạn đã học hết toàn bộ từ vựng</p>
+            <p className="text-gray-500 font-medium">Bạn đã học hết toàn bộ từ vựng!</p>
+            
             {TuVungHocLai.length > 0 && (
               <button
                 onClick={() => {
                   HocLai();
                 }}
-                className="w-[300px] gap-3 px-[10px] py-[10px] rounded-[10px] bg-[#13474b] flex justify-center items-center text-white font-medium"
+                className="w-[300px] gap-3 px-[10px] py-[10px] rounded-[10px] bg-[#13474b] hover:bg-[#1a5b60] transition-colors flex justify-center items-center text-white font-medium shadow-md"
               >
                 <img
                   className="w-[25px]"
                   src="https://img.icons8.com/?size=100&id=NkMivaNIpaNp&format=png&color=FFFFFF"
                   alt=""
                 />
-                <p>Học lại từ chưa nhớ</p>
+                <p>Học lại từ chưa nhớ ({TuVungHocLai.length})</p>
               </button>
             )}
 
             <button
               onClick={() => {
-                ChuyenTrang(`/HocVien/QlLopHoc/${idlophoc}`);
+                ChuyenTrang(-1);
               }}
-              className={`w-[300px] gap-3 px-[10px] py-[10px] rounded-[10px] border border-[#13474b] flex justify-center items-center  font-medium ${TuVungHocLai.length > 0 ? `bg-white text-[#13474b]` : `bg-[#13474b] text-white`}`}
+              className={`w-[300px] gap-3 px-[10px] py-[10px] rounded-[10px] border border-[#13474b] flex justify-center items-center font-medium transition-colors ${TuVungHocLai.length > 0 ? "bg-white text-[#13474b] hover:bg-gray-50" : "bg-[#13474b] text-white hover:bg-[#1a5b60]"}`}
             >
               <img
                 className="w-[25px]"
-                src={`https://img.icons8.com/?size=100&id=40217&format=png&color=${TuVungHocLai.length > 0 ? `13474b` : `FFFFFF`}`}
+                src={`https://img.icons8.com/?size=100&id=40217&format=png&color=${TuVungHocLai.length > 0 ? "13474b" : "FFFFFF"}`}
                 alt=""
               />
               <p>Về trang từ vựng</p>

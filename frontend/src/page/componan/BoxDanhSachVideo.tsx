@@ -24,12 +24,9 @@ export default function BoxDanhSachVideo({
 
   const xoaVideo = async () => {
     try {
-      const api = await fetch(
-        `${BACKEND_URL}/api/xoaVideo/${items._id}`,
-        {
-          method: "DELETE",
-        },
-      );
+      const api = await fetch(`${BACKEND_URL}/api/xoaVideo/${items._id}`, {
+        method: "DELETE",
+      });
       const req = await api.json();
       if (req.trangThai === "tc") {
         setShowXacNhan(false);
@@ -72,7 +69,7 @@ export default function BoxDanhSachVideo({
           className="w-screen h-screen fixed top-[0px] left-0 z-[2]"
         ></div>
       )}
-      
+
       {/* Icon */}
       <div className="w-[50px] h-[50px] bg-[#2A6770] rounded-[10px] shrink-0 flex items-center justify-center">
         <img
@@ -83,14 +80,16 @@ export default function BoxDanhSachVideo({
       </div>
 
       {/* Content */}
-      <p className="text-[20px]  h-fit font-bold text-[#114A53]">{items.tenvideobaigiang}</p>
+      <p className="text-[20px]  h-fit font-bold text-[#114A53]">
+        {items.tenvideobaigiang}
+      </p>
       <button
         onClick={() => {
-           chuyenTrang(`/XemVideoBaiGiang/${items._id}`);
+          chuyenTrang(`/XemVideoBaiGiang/${items._id}`);
         }}
         className="absolute right-[35px] px-[10px] py-[5px] rounded-[10px] bg-[#2A6770] text-white font-bold"
       >
-        Xem 
+        Xem
       </button>
       {/* <div className="flex flex-col gap-1 w-full item-center">
         

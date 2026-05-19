@@ -46,12 +46,9 @@ export default function QL_quanLyTuVung() {
 
   const layTuVungTrungTam = async (idKhoaHoc: string) => {
     try {
-      const api = await fetch(
-        `${BACKEND_URL}/api/layDanhSachTuVung-Gv-tbkh`,
-        {
-          headers: { Authorization: Token, "Content-Type": "application/json" },
-        },
-      );
+      const api = await fetch(`${BACKEND_URL}/api/layDanhSachTuVung-Gv-tbkh`, {
+        headers: { Authorization: Token, "Content-Type": "application/json" },
+      });
       const req = await api.json();
       if (req.trangThai === "ktt") {
         setDataTuVungTT([]);
@@ -91,7 +88,7 @@ export default function QL_quanLyTuVung() {
   }, [Tap]);
 
   return (
-    <section className="w-full flex flex-col gap-2 relative mt-[10px]">
+    <section className="w-full mx-[10px] flex flex-col gap-2 relative mt-[10px]">
       {tb && <Alert type={typeTB} noiDung={ndTB} tat={TatThongBao} />}
 
       <div className="text-[#2A6770] font-medium text-[15px] flex gap-2 justify-start items-center">
@@ -131,28 +128,30 @@ export default function QL_quanLyTuVung() {
 
       {/* Main List */}
       <div className="flex gap-2 flex-col mt-[20px]">
-        
         {!Tap && DataKhoaHoc.length === 0 && (
           <p className="w-full text-center text-black/60 italic">
             Chưa có khóa học nào được tạo.
           </p>
         )}
-        
+
         {Tap && DataTuVungTT.length === 0 && (
           <p className="w-full text-center text-black/60 italic">
             Khóa học này chưa có bộ từ vựng nào.
           </p>
         )}
 
-        {Tap && DataTuVungTT?.filter((items)=>items.idKhoaHoc===Tap).toReversed().map((items) => (
-          <BoxDanhSachTuVung
-            key={items._id}
-            layid={layid}
-            suaTuVung={suaTuVung}
-            items={items}
-            laydata={() => layTuVungTrungTam(Tap)}
-          />
-        ))}
+        {Tap &&
+          DataTuVungTT?.filter((items) => items.idKhoaHoc === Tap)
+            .toReversed()
+            .map((items) => (
+              <BoxDanhSachTuVung
+                key={items._id}
+                layid={layid}
+                suaTuVung={suaTuVung}
+                items={items}
+                laydata={() => layTuVungTrungTam(Tap)}
+              />
+            ))}
       </div>
 
       {/* Modal Thêm/Sửa */}
@@ -162,7 +161,7 @@ export default function QL_quanLyTuVung() {
           type={TypeThemSua}
           tatThemTV={tatThemTV}
           idTuVung={idTuVung}
-          idKhoaHoc={Tap} 
+          idKhoaHoc={Tap}
         />
       )}
     </section>

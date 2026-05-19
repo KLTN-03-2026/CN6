@@ -35,9 +35,41 @@ export default function HV_box_bt({
   // Bộ nhớ tạm (useRef) để giữ file ghi âm mà không làm load lại màn hình
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const cacManhAmThanh = useRef<BlobPart[]>([]);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [thoiGianGhiAm, setThoiGianGhiAm] = useState(120);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? "0" : ""}${s}`;
+  };
 
   const [DapAnTN, setDapAnTN] = useState(dapan?.dapAnHocVien || "");
   const inTL = useRef<HTMLTextAreaElement>(null);
+  const [errDapAn, setErrDapAn] = useState(false);
+
+  const handleLuuTiep = () => {
+    let isValid = false;
+    if (data?.type === 0) {
+      if (DapAnTN !== "") isValid = true;
+    } else if (data?.type === 1 || data?.type === 2) {
+      if (inTL.current?.value && inTL.current.value.trim() !== "") isValid = true;
+    } else if (data?.type === 3) {
+      if (linkAmThanh && linkAmThanh !== "") isValid = true;
+    }
+
+    if (!isValid) {
+      setErrDapAn(true);
+      return;
+    }
+
+    setErrDapAn(false);
+    chonDapAN();
+    ClickChon(Chon + 1);
+    if (data?.type === 0) setDapAnTN("");
+    if (data?.type === 3) setLinkAmThanh(null);
+  };
 
   const chonDapAN = () => {
     if (data?.type === 0) {
@@ -110,7 +142,15 @@ export default function HV_box_bt({
   }, [dapan]);
 
   useEffect(() => {
-    console.log(inTL.current?.value || "");
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setDangGhiAm(false);
+    setThoiGianGhiAm(120);
+    setErrDapAn(false);
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop());
+    }
   }, [Chon]);
 
   // 1. Hàm bắt đầu ghi âm
@@ -142,12 +182,29 @@ export default function HV_box_bt({
         // Tạo một đường link ảo trên trình duyệt để nghe lại ngay lập tức
         const duongDanAo = URL.createObjectURL(fileAmThanh);
         setLinkAmThanh(duongDanAo);
+        setErrDapAn(false);
       };
 
       // Bật công tắc bắt đầu ghi
       mayGhiAm.start();
       setDangGhiAm(true);
+      setThoiGianGhiAm(120);
       setLinkAmThanh(null); // Ẩn cái file cũ đi trong lúc đang ghi cái mới
+      
+      intervalRef.current = setInterval(() => {
+        setThoiGianGhiAm((prev) => {
+          if (prev <= 1) {
+            dungGhiAm();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      // Dừng ghi âm sau 2 phút
+      timeoutRef.current = setTimeout(() => {
+        dungGhiAm();
+      }, 120000);
     } catch (loi) {
       console.error("Lỗi truy cập Micro:", loi);
       alert("Vui lòng cho phép trình duyệt sử dụng Micro của bạn!");
@@ -156,7 +213,9 @@ export default function HV_box_bt({
 
   // 2. Hàm dừng ghi âm
   const dungGhiAm = () => {
-    if (mediaRecorderRef.current && dangGhiAm) {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop(); // Dừng thu
 
       // Lệnh Tắt đèn Micro (Quan trọng): Chặn trình duyệt hiển thị dấu chấm đỏ đang quay lén
@@ -186,19 +245,20 @@ export default function HV_box_bt({
 
           {/* file âm thanh */}
           {data?.fileNghe !== "" && (
-            <audio controls>
+            <audio controls autoPlay key={data?.fileNghe}>
               <source src={`${data?.fileNghe}`} type="audio/mpeg" />
             </audio>
           )}
 
           {/* /// phần câu hỏi */}
-          <div className="text-[15px] w-full flex flex-col gap-2 px-[10px] ">
+          <div className={`text-[15px] w-full flex flex-col gap-2 p-[10px] rounded-[10px] border ${errDapAn ? "border-red-500 bg-red-50" : "border-transparent"}`}>
             <p className="whitespace-pre-line">
               câu {Chon + 1} : {data?.CauHoi}
             </p>
             <div
               onClick={() => {
                 setDapAnTN("a");
+                setErrDapAn(false);
               }}
               className="flex gap-2 items-center mt-[10px]  cursor-pointer w-fit"
             >
@@ -213,6 +273,7 @@ export default function HV_box_bt({
             <div
               onClick={() => {
                 setDapAnTN("b");
+                setErrDapAn(false);
               }}
               className="flex gap-2 items-center mt-[10px]  cursor-pointer w-fit"
             >
@@ -227,6 +288,7 @@ export default function HV_box_bt({
             <div
               onClick={() => {
                 setDapAnTN("c");
+                setErrDapAn(false);
               }}
               className="flex gap-2 items-center mt-[10px]  cursor-pointer w-fit"
             >
@@ -241,6 +303,7 @@ export default function HV_box_bt({
             <div
               onClick={() => {
                 setDapAnTN("d");
+                setErrDapAn(false);
               }}
               className="flex gap-2 items-center mt-[10px]  cursor-pointer w-fit"
             >
@@ -254,14 +317,10 @@ export default function HV_box_bt({
           </div>
           <div className="w-full mt-[10px] flex justify-end">
             <button
-              onClick={() => {
-                ClickChon(Chon + 1);
-                chonDapAN();
-                setDapAnTN("");
-              }}
+              onClick={handleLuuTiep}
               className="text-[15px] p-[10px] bg-[#2A6770] text-white rounded-[15px] font-medium"
             >
-              Lưu
+              Lưu / Tiếp
             </button>
           </div>
         </div>
@@ -279,7 +338,7 @@ export default function HV_box_bt({
           )}
           {/* file âm thanh */}
           {data?.fileNghe !== "" && (
-            <audio controls>
+            <audio controls autoPlay key={data?.fileNghe}>
               <source src={`${data?.fileNghe}`} type="audio/mpeg" />
             </audio>
           )}
@@ -288,18 +347,16 @@ export default function HV_box_bt({
           </p>
           <textarea
             ref={inTL}
+            onChange={() => setErrDapAn(false)}
             defaultValue={dapan?.dapAnHocVien || ""}
-            className="p-[10px] h-[100px] bg-[#d7e8ec] w-full rounded-[10px] focus:outline-none"
+            className={`p-[10px] h-[100px] bg-[#d7e8ec] w-full rounded-[10px] focus:outline-none border ${errDapAn ? "border-red-500" : "border-transparent"}`}
           />
           <div className="w-full mt-[10px] flex justify-end">
             <button
-              onClick={() => {
-                ClickChon(Chon + 1);
-                chonDapAN();
-              }}
+              onClick={handleLuuTiep}
               className="text-[15px] p-[10px] bg-[#2A6770] text-white rounded-[15px] font-medium"
             >
-              Lưu
+              Lưu / Tiếp
             </button>
           </div>
         </div>
@@ -317,7 +374,7 @@ export default function HV_box_bt({
           )}
           {/* file âm thanh */}
           {data?.fileNghe !== "" && (
-            <audio controls>
+            <audio controls autoPlay key={data?.fileNghe}>
               <source src={`${data?.fileNghe}`} type="audio/mpeg" />
             </audio>
           )}
@@ -327,18 +384,16 @@ export default function HV_box_bt({
           </p>
           <textarea
             ref={inTL}
+            onChange={() => setErrDapAn(false)}
             defaultValue={dapan?.dapAnHocVien || ""}
-            className="p-[10px] h-[300px] bg-[#d7e8ec] w-full rounded-[10px] focus:outline-none"
+            className={`p-[10px] h-[300px] bg-[#d7e8ec] w-full rounded-[10px] focus:outline-none border ${errDapAn ? "border-red-500" : "border-transparent"}`}
           />
           <div className="w-full mt-[10px] flex justify-end">
             <button
-              onClick={() => {
-                ClickChon(Chon + 1);
-                chonDapAN();
-              }}
+              onClick={handleLuuTiep}
               className="text-[15px] p-[10px] bg-[#2A6770] text-white rounded-[15px] font-medium"
             >
-              Lưu
+              Lưu / Tiếp
             </button>
           </div>
         </div>
@@ -356,7 +411,7 @@ export default function HV_box_bt({
           )}
           {/* file âm thanh */}
           {data?.fileNghe !== "" && (
-            <audio controls>
+            <audio controls autoPlay key={data?.fileNghe}>
               <source src={`${data?.fileNghe}`} type="audio/mpeg" />
             </audio>
           )}
@@ -365,14 +420,22 @@ export default function HV_box_bt({
           </p>
           {/* ////////////////////////// */}
 
-          <div className="border border-black/30 p-[10px] rounded-[20px] text-[13px] flex flex-col justify-center items-center gap-2">
+          <div className={`border p-[10px] rounded-[20px] text-[13px] flex flex-col justify-center items-center gap-2 ${errDapAn ? "border-red-500 bg-red-50" : "border-black/30"}`}>
+            <p className="font-medium text-red-500 text-[14px]">
+              Lưu ý: Thời gian ghi âm tối đa là 2 phút
+            </p>
             <p className="opacity-[0.75]">Nhấn vào mic để ghi âm</p>
             <div
               onClick={dangGhiAm ? dungGhiAm : batDauGhiAm}
               className={`cursor-pointer w-[300px] h-[50px]  rounded-[20px] flex justify-center items-center transition-all duration-300 ${dangGhiAm ? `bg-[#ff1200]` : `bg-[#2A6770]`}`}
             >
               {dangGhiAm ? (
-                <div className="h-[28px] w-[28px] bg-white/90 rounded-[8px]"></div>
+                <div className="flex items-center gap-3">
+                  <div className="h-[20px] w-[20px] bg-white/90 rounded-[4px] shadow-sm"></div>
+                  <span className="text-white font-bold text-[16px] tracking-widest">
+                    {formatTime(thoiGianGhiAm)}
+                  </span>
+                </div>
               ) : (
                 <img
                   className="h-[70%]"
@@ -390,14 +453,10 @@ export default function HV_box_bt({
           </div>
           <div className="w-full mt-[10px] flex justify-end">
             <button
-              onClick={() => {
-                ClickChon(Chon + 1);
-                setLinkAmThanh(null);
-                chonDapAN();
-              }}
+              onClick={handleLuuTiep}
               className="text-[15px] p-[10px] bg-[#2A6770] text-white rounded-[15px] font-medium"
             >
-              Lưu
+              Lưu / Tiếp
             </button>
           </div>
         </div>

@@ -4,6 +4,9 @@ import Sidebar from "./componan/sidebar";
 import BoxKhoaHoc from "./componan/boxKhoaHoc";
 import { useState } from "react";
 import Box_HV_CongDong from "./componan/box_HV_CongDong";
+import Box_HV_LuyenDe from "./componan/box_hv_luyende";
+import HV_thiThu from "./HV_thiThu";
+import Box_hv_thiThu from "./componan/box__hv_thiThu";
 
 export default function HocVien_QlHocTap() {
   const sidebarData = [
@@ -40,6 +43,8 @@ export default function HocVien_QlHocTap() {
 
         {/* /////////////////main /////////////////////// */}
         {Chon === 0 && <BoxKhoaHoc />}
+        {Chon === 1 && <Box_HV_LuyenDe />}
+        {Chon === 2 && <Box_hv_thiThu />}
       </section>
     </>
   );

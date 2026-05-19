@@ -30,6 +30,7 @@ export default function BoxKhoaHoc() {
       const req = await api.json();
       if (req.trangThai === "tc") {
         setData(req.data);
+        console.log(req.data);
 
         setal(false);
       } else if (req.trangThai === "ktt") {
@@ -75,11 +76,14 @@ export default function BoxKhoaHoc() {
           </button>
           {(item.trangThai === "Ẩn" ||
             item.trangThai === "Kết Thúc" ||
-            item.trangThai === "Đã xóa") && (
+            item.trangThai === "Đã xóa" ||
+            item.trangThai === "Đã bị chặn") && (
             <div className="w-full h-full absolute bg-black/50 flex items-center justify-center left-[0] rounded-[10px] font-extrabold backdrop-blur-[3px] text-white">
               {item.trangThai === "Ẩn" && "LỚP HỌC TẠM THỜI BỊ ẨN"}
               {item.trangThai === "Đã xóa" && "LỚP ĐÃ BỊ XÓA"}
               {item.trangThai === "Kết Thúc" && "LỚP HỌC ĐÃ KẾT THÚC"}
+              {item.trangThai === "Đã bị chặn" &&
+                "Bạn đã bị chặn tham gia khóa học này"}
             </div>
           )}
         </div>

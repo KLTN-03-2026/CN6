@@ -23,7 +23,7 @@ export default function QL_taiKhoan() {
   // local state for editing VaiTro
   // key: id taikhoan, value: selected vaitro
   const [editVaiTro, setEditVaiTro] = useState<{ [key: string]: string }>({});
-  
+
   // state for search functionality
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -91,15 +91,15 @@ export default function QL_taiKhoan() {
   const currentList = DataTaiKhoan.filter((item) => {
     const matchRole = item.VaiTro === Tap;
     const term = searchTerm.toLowerCase();
-    const matchSearch = 
-      item.HoTen?.toLowerCase().includes(term) || 
-      item.Email?.toLowerCase().includes(term) || 
+    const matchSearch =
+      item.HoTen?.toLowerCase().includes(term) ||
+      item.Email?.toLowerCase().includes(term) ||
       item.sdt?.includes(term);
     return matchRole && matchSearch;
   });
 
   return (
-    <section className="w-full flex flex-col gap-2 relative mt-[10px]">
+    <section className="w-full mx-[10px] flex flex-col gap-2 relative mt-[10px]">
       {tb && <Alert type={typeTB} noiDung={ndTB} tat={TatThongBao} />}
 
       {/* TABS & ADD BUTTON & SEARCH */}

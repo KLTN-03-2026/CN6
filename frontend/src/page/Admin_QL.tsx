@@ -7,6 +7,11 @@ import QL_quanLyTuVung from "./componan/QL_quanLyTuVung";
 import QL_vidoBaiGiang from "./componan/QL_videoBaiGiang";
 import QL_taiKhoan from "./componan/QL_taiKhoan";
 import Ql_luyenDe from "./componan/QL_luyenDe";
+import QL_quanLyThiThu from "./componan/QL_quanLyThiThu";
+import QL_KTDauVao from "./componan/QL_KTDauVao";
+import QL_yeuCauTuVan from "./componan/QL_yeuCauTuVan";
+import QL_hoaDon from "./componan/QL_hoaDon";
+import QL_thongKe from "./componan/QL_thongKe";
 
 export default function Admin_QL() {
   const sidebarData = [
@@ -76,6 +81,11 @@ export default function Admin_QL() {
         {Chon === 3 && <QL_quanLyTuVung />}
         {Chon === 4 && <QL_taiKhoan />}
         {Chon === 5 && <Ql_luyenDe />}
+        {Chon === 6 && <QL_quanLyThiThu />}
+        {Chon === 7 && <QL_KTDauVao />}
+        {Chon === 8 && <QL_yeuCauTuVan />}
+        {Chon === 9 && <QL_thongKe />}
+        {Chon === 10 && <QL_hoaDon />}
       </section>
     </>
   );

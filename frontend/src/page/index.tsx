@@ -369,7 +369,7 @@ export default function Index() {
                     <div className="w-[50px] h-[50px] shrink-0 bg-white rounded-[50%] flex justify-center items-center overflow-hidden  text-center font-extrabold text-[25px] text-[#1A4857]">
                       {index + 1}
                     </div>
-                    <p className="font-extrabold text-[25px] truncate overflow-hidden w-full ">
+                    <p className="font-extrabold text-[23px] truncate overflow-hidden w-full ">
                       {item.TenKhoaHoc}
                     </p>
                   </div>

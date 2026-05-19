@@ -30,7 +30,7 @@ export default function GV_QL_KhoaHoc() {
   }, []);
 
   return (
-    <section className=" w-full flex flex-col gap-2">
+    <section className=" w-full mx-[10px] flex flex-col gap-2">
       <div className="w-[10] flex justify-end">
         {/* nút thêm  */}
         <div

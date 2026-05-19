@@ -107,7 +107,7 @@ export default function QL_LopHoc() {
   }, []);
 
   return (
-    <section className=" w-full flex flex-col gap-2 relative">
+    <section className=" w-full mx-[10px] flex flex-col gap-2 relative">
       {tb && <Alert type={typeTB} noiDung={ndTB} tat={TatThongBao} />}
       {/*  thanh điều hướng khóa học */}
       {ThemLH && (

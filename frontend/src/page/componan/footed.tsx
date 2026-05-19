@@ -1,6 +1,6 @@
 export default function Footed() {
   return (
-    <footer className="mx-[10px] flex gap-[50px] mt-[100px]  border-t-[1px] border-t-[#0D2A2E] py-[50px] justify-center">
+    <footer className="mx-[10px] flex-wrap flex gap-[50px] mt-[100px]  border-t-[1px] border-t-[#0D2A2E] py-[50px] w-full justify-center">
       {/* //////////////////////////////////////////d */}
       <div className="gap-3 flex flex-col w-[420px]">
         <h2 className="text-[23px] text-[#2F8C8F] font-extrabold">

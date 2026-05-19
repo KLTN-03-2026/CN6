@@ -119,7 +119,7 @@ export default function QL_luyenDe() {
   const dsTab = ["ALL", "Listening", "Reading", "Writing", "Speaking"];
 
   return (
-    <section className="w-full flex flex-col gap-4 relative mt-[10px]">
+    <section className="w-full mx-[10px] flex flex-col gap-4 relative mt-[10px]">
       {tb && <Alert type={typeTB} noiDung={ndTB} tat={TatThongBao} />}
 
       {/* TABS & ADD BUTTON & SEARCH */}
@@ -192,7 +192,9 @@ export default function QL_luyenDe() {
         </div>
         <div className="w-full border border-t-black/20 my-[20px]"></div>
         {/* DANH SÁCH ĐÃ TẠO */}
-        <h3 className="font-bold text-[#114A53] text-[18px] ">Đã Tạo</h3>
+        <h3 className="font-bold text-[#114A53] text-[18px] mb-[10px] ">
+          Đã Tạo
+        </h3>
         <div className="flex flex-wrap gap-4">
           {currentListDaTao.map((item) => (
             <div
@@ -209,7 +211,10 @@ export default function QL_luyenDe() {
                 {item?.tenDe}
               </p>
               <p className="text-[14px] text-white/80 font-medium italic mt-1">
-                Ngày tạo: {item?.ngayTao || "N/A"}
+                {item?.kyNang === "Writing" && `8 Câu`}
+                {item?.kyNang === "Speaking" && `11 Câu`}
+                {item?.kyNang === "Listening" && `100 Câu`}
+                {item?.kyNang === "Reading" && `100 Câu`}
               </p>
               <button
                 onClick={() => navigate(`/QL_chiTietLuyenDe/${item?._id}`)}

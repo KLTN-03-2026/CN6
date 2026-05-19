@@ -20,7 +20,7 @@ export default function Sidebar({
   let so = 0;
 
   return (
-    <div className="sticky shrink-0 top-[80px] w-[250px] h-[calc(100vh-100px)] py-[10px]  ">
+    <div className="sticky shrink-0 top-[80px] w-[270px] h-[calc(100vh-100px)] py-[10px]  ">
       {Type === "ql" ? (
         <div className="relative w-full h-full flex flex-col gap-2">
           <div className="flex gap-1 flex-col">
@@ -62,19 +62,32 @@ export default function Sidebar({
                   className={`flex flex-col  items-start  gap-2 w-full p-[10px] transition-all duration-300 cursor-pointer  text-[#114A53] font-medium border-b  border-b-black/20}`}
                 >
                   <p>{item.text}</p>
-                  <div className="flex gap-[3px] flex-wrap">
+                  <div className="flex gap-[7px] w-full  flex-wrap">
                     {Array.from({ length: item.slCauHoi }).map((_, index1) => {
                       let soHien = xp + index1 + 1;
+                      const dapAnItem = dapAN?.[soHien - 1];
+                      
+                      let bgColor = "bg-[#d7e8ec] text-[#114a53]";
+                      if (dapAnItem) {
+                        if (dapAnItem.isCham) {
+                          bgColor = dapAnItem.dungSai === "dung" ? "bg-[#018532] text-white" : "bg-[#e03d3a] text-white";
+                        } else if (dapAnItem.dapAnHocVien) {
+                          bgColor = "bg-[#114a53] text-white";
+                        }
+                      }
+                      
+                      const soHienThi = dapAnItem?.soCau || soHien;
+
                       return (
                         <div
                           key={soHien}
                           onClick={() => {
                             ClickChon(soHien - 1);
-                            console.log(dapAN?.[soHien - 1]);
+                            console.log(dapAnItem);
                           }}
-                          className={`w-[40px] h-[40px] flex justify-center items-center rounded-[10px]  ${dapAN?.[soHien - 1].dapAnHocVien ? `bg-[#114a53] text-white ` : ` bg-[#d7e8ec] text-[#114a53]`}  `}
+                          className={`w-[40px] h-[40px] flex justify-center items-center rounded-[10px] ${bgColor} `}
                         >
-                          {soHien}
+                          {soHienThi}
                         </div>
                       );
                     })}

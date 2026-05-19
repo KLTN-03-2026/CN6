@@ -92,7 +92,7 @@ export default function QL_vidoBaiGiang() {
     DataVideo?.filter((item) => item.idKhoaHoc === Tap) || [];
 
   return (
-    <section className="w-full flex flex-col gap-2 relative mt-[10px]">
+    <section className="w-full mx-[10px] flex flex-col gap-2 relative mt-[10px]">
       {tb && <Alert type={typeTB} noiDung={ndTB} tat={TatThongBao} />}
 
       <div className="text-[#2A6770] font-medium text-[15px] flex gap-2 justify-start items-center">

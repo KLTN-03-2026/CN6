@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Header from "./header";
 
 export default function ChatBot() {
+  const navigate = useNavigate();
   const [chuyenDong, setchuyenDong] = useState(0);
   const [ChatBot, setChatBot] = useState(false);
   const [drXoa, setdrXoa] = useState(false);
@@ -133,6 +135,70 @@ export default function ChatBot() {
     }
   };
 
+  // Parse markdown links [text](url) thành clickable cards
+  const renderMessage = (text: string, isAI: boolean) => {
+    const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = markdownLinkRegex.exec(text)) !== null) {
+      // Phần text trước link
+      if (match.index > lastIndex) {
+        parts.push(
+          <span key={lastIndex}>{text.slice(lastIndex, match.index)}</span>
+        );
+      }
+
+      const label = match[1];
+      const url = match[2];
+      const isInternal =
+        url.startsWith("http://localhost:5173") ||
+        url.startsWith("/");
+      const path = isInternal
+        ? url.replace("http://localhost:5173", "")
+        : url;
+
+      parts.push(
+        <button
+          key={match.index}
+          onClick={() => {
+            if (isInternal) {
+              navigate(path);
+            } else {
+              window.open(url, "_blank");
+            }
+          }}
+          className={`
+            inline-flex items-center gap-1 mt-1 px-3 py-1.5 rounded-lg text-[13px] font-medium
+            transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] cursor-pointer
+            ${isAI
+              ? "bg-white/20 hover:bg-white/30 text-white border border-white/30"
+              : "bg-[#114a53] hover:bg-[#0d3b42] text-white border border-[#114a53]"
+            }
+          `}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            {isInternal
+              ? <><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></>
+              : <><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></>
+            }
+          </svg>
+          {label}
+        </button>
+      );
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Phần text còn lại sau link cuối
+    if (lastIndex < text.length) {
+      parts.push(<span key={lastIndex}>{text.slice(lastIndex)}</span>);
+    }
+
+    return <>{parts}</>;
+  };
+
   return (
     <>
       {drXoa && (
@@ -228,7 +294,7 @@ export default function ChatBot() {
                 <div
                   className={` ${item.nguoigui === "AI" ? `bg-[#114a53] text-white ` : `bg-white text-black `}  p-[10px]  w-fit rounded-[10px] whitespace-normal break-words max-w-full`}
                 >
-                  {item.mess}
+                  {renderMessage(item.mess, item.nguoigui === "AI")}
                 </div>
               </div>
             ))}

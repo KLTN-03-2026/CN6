@@ -45,7 +45,7 @@ export default function QL_danhSachTK({
         {items?.NamSinh || "Đang Tải ..."}
       </p>
       <p className="w-[200px] text-center  shrink-0">
-        {items?.VaiTro || "Đang Tải ..."}
+        {items?.NgheNghiep || "Đang Tải ..."}
       </p>
       <div
         onClick={() => {

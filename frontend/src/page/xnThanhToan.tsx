@@ -93,14 +93,14 @@ export default function XNThanhToan() {
     console.log(data);
   };
 
-  const themHoaDon = async () => {
+  const themHoaDon = async (maHoaDon: string) => {
     try {
       const date = new Date();
       const vietnamTime = date.toLocaleString("vi-VN", {
         timeZone: "Asia/Ho_Chi_Minh",
       });
       const data = {
-        maHoaDon: DataTT.ghiChu,
+        maHoaDon: maHoaDon,
         idKhoaHoc: Data.datakh._id,
         idLopHoc: Data.datalop._id,
         email: Data.datatk.Email,
@@ -115,6 +115,7 @@ export default function XNThanhToan() {
         body: JSON.stringify(data),
       });
       const res = await api.json();
+      console.log("them hoa don:", res);
     } catch (err) {
       console.log("them hoa don that bai: " + err);
     }
@@ -157,12 +158,13 @@ export default function XNThanhToan() {
           const api = await fetch(
             `http://localhost:3000/KTdonHang/${DataTT.orderCode}`,
           );
-          console.log(0);
           const res = await api.json();
           if (res.trangThai === "tc") {
             clearInterval(intervalId);
+            // Lưu ghiChu trước khi setDataTT(null) để tránh mất dữ liệu
+            const maHoaDon = DataTT.ghiChu;
             setDataTT(null);
-            themHoaDon();
+            themHoaDon(maHoaDon);
             guiHoaDonEmail();
             capNhatSiSO();
             setchon(3);

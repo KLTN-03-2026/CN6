@@ -78,19 +78,38 @@ export default function KhoaHoc() {
 
   const ktTrungKhoaHoc = async (id: String) => {
     try {
+      const checkToken = localStorage.getItem("E-learningTK");
+      let currentToken = Token;
+      if (checkToken) {
+        try {
+          currentToken = JSON.parse(checkToken);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      if (!currentToken) {
+        settypeTB("err");
+        setNdTB("Vui lòng đăng nhập để đăng ký học!");
+        batThongBao();
+        return;
+      }
+
       const api = await fetch("http://localhost:3000/api/kt-trung-khoa-hoc", {
         method: "GET",
-        headers: { Authorization: Token, "Content-Type": "application/json" },
+        headers: { Authorization: currentToken, "Content-Type": "application/json" },
       });
       const res = await api.json();
       console.log(res);
       if (res.trangThai) {
         ChuyenTrang(`/XNThanhToan/${id}`);
-      } else if (!res.trangThai)
+      } else if (!res.trangThai) {
+        settypeTB("w");
         setNdTB(
           "ban hien đang hoc 1 khoa học khác nên không thể học khóa học này",
         );
-      batThongBao();
+        batThongBao();
+      }
     } catch (err) {
       console.log("ktTrungKhoaHoc thất bại");
     }
@@ -111,6 +130,7 @@ export default function KhoaHoc() {
       if (res.mess < 30) {
         ktTrungKhoaHoc(ma);
       } else {
+        settypeTB("w");
         setNdTB("lớp đã đầy");
         batThongBao();
       }
@@ -324,6 +344,28 @@ export default function KhoaHoc() {
                     </div>
                     <button
                       onClick={async () => {
+                        const checkToken = localStorage.getItem("E-learningTK");
+                        if (!checkToken) {
+                          settypeTB("err");
+                          setNdTB("Vui lòng đăng nhập để đăng ký học!");
+                          batThongBao();
+                          return;
+                        }
+                        try {
+                          const parsedToken = JSON.parse(checkToken);
+                          if (!parsedToken) {
+                            settypeTB("err");
+                            setNdTB("Vui lòng đăng nhập để đăng ký học!");
+                            batThongBao();
+                            return;
+                          }
+                        } catch (e) {
+                          settypeTB("err");
+                          setNdTB("Vui lòng đăng nhập để đăng ký học!");
+                          batThongBao();
+                          return;
+                        }
+
                         ktSiSo(item._id);
                         layDslop();
                       }}
